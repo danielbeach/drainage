@@ -1,0 +1,39 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "drainage"
+version = "0.1.0"
+description = "High-performance data lake health analyzer for Delta Lake and Apache Iceberg"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+keywords = ["data-lake", "delta-lake", "iceberg", "s3", "analytics", "data-engineering"]
+authors = [
+    { name = "Daniel Beach" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/drainage"
+Repository = "https://github.com/yourusername/drainage"
+Documentation = "https://github.com/yourusername/drainage#readme"
+
+[tool.maturin]
+python-source = "python"
+module-name = "drainage"
+
