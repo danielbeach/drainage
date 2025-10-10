@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 license = { text = "MIT" }
 keywords = ["data-lake", "delta-lake", "iceberg", "s3", "analytics", "data-engineering"]
 authors = [
-    { name = "Daniel Beach" }
+    { name = "Daniel Beach", email = "daniel@example.com" }
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -29,9 +29,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/drainage"
-Repository = "https://github.com/yourusername/drainage"
-Documentation = "https://github.com/yourusername/drainage#readme"
+Homepage = "https://github.com/danielbeach/drainage"
+Repository = "https://github.com/danielbeach/drainage"
+Documentation = "https://github.com/danielbeach/drainage#readme"
+Issues = "https://github.com/danielbeach/drainage/issues"
 
 [tool.maturin]
 python-source = "python"
