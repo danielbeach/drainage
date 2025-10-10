@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "drainage"
-version = "0.1.0"
+version = "0.1.2"
 description = "High-performance data lake health analyzer for Delta Lake and Apache Iceberg"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -35,6 +35,5 @@ Documentation = "https://github.com/danielbeach/drainage#readme"
 Issues = "https://github.com/danielbeach/drainage/issues"
 
 [tool.maturin]
-python-source = "python"
 module-name = "drainage"
 
