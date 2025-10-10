@@ -118,6 +118,35 @@ print(f"Medium files (16-128MB): {dist.medium_files}")
 print(f"Large files (128MB-1GB): {dist.large_files}")
 print(f"Very large files (>1GB): {dist.very_large_files}")
 ```
+## Working on Databricks
+```
+import drainage
+# Alternative: Use the table location directly
+tables = spark.sql("SHOW TABLES IN development.backend_dev")
+for table in tables.collect():
+    table_name = table['tableName']
+    
+    # Get table properties including location
+    table_info = spark.sql(f"DESCRIBE TABLE EXTENDED development.backend_dev.{table_name}")
+    
+    # Look for Location in the output
+    location_rows = table_info.filter(table_info['col_name'] == 'Location').collect()
+    
+    if location_rows:
+        s3_path = location_rows[0]['data_type']
+        print(f"Table: {table_name}, Location: {s3_path}")
+        
+        # Test if this is a valid Delta Lake table
+        if s3_path.startswith("s3://") and "__unitystorage" in s3_path:
+            print(f"✅ Unity Catalog Delta table: {s3_path}")
+            # Try analysis
+            try:
+                report = drainage.analyze_table(s3_path=s3_path, aws_region="us-east-1")
+                drainage.print_health_report(report)
+            except Exception as e:
+                print(f"❌ Analysis failed: {e}")
+```
+
 
 ## Health Metrics Explained
 
