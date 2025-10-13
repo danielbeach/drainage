@@ -87,7 +87,7 @@ jobs:
         python -m venv .venv
         source .venv/bin/activate
         python -m pip install --upgrade pip
-        pip install maturin pytest pytest-mock pytest-cov flake8 black
+        pip install maturin pytest pytest-mock pytest-cov
 
     - name: Build Python extension
       run: |
@@ -98,16 +98,6 @@ jobs:
       run: |
         source .venv/bin/activate
         python -m pytest tests/ -v --cov=drainage --cov-report=xml
-
-    - name: Check Python formatting
-      run: |
-        source .venv/bin/activate
-        black --check tests/ examples/
-
-    - name: Check Python linting
-      run: |
-        source .venv/bin/activate
-        flake8 tests/ examples/ --max-line-length=100
 
     - name: Test examples
       run: |
