@@ -85,25 +85,28 @@ jobs:
     - name: Create virtual environment
       run: |
         python -m venv .venv
-        source .venv/bin/activate
         python -m pip install --upgrade pip
         pip install maturin pytest pytest-mock pytest-cov
+      shell: bash
 
     - name: Build Python extension
       run: |
         source .venv/bin/activate
         maturin develop --release
+      shell: bash
 
     - name: Run Python tests
       run: |
         source .venv/bin/activate
         python -m pytest tests/ -v --cov=drainage --cov-report=xml
+      shell: bash
 
     - name: Test examples
       run: |
         source .venv/bin/activate
         python -c "import drainage; print('drainage module imported successfully')"
         python -c "import examples.simple_analysis; print('examples imported successfully')"
+      shell: bash
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
