@@ -127,7 +127,7 @@ for table in tables.collect():
     table_name = table['tableName']
     
     # Get table properties including location
-    table_info = spark.sql(f"DESCRIBE TABLE EXTENDED development.backend_dev.{table_name}")
+    table_info = spark.sql(f"DESCRIBE TABLE EXTENDED development.main.{table_name}")
     
     # Look for Location in the output
     location_rows = table_info.filter(table_info['col_name'] == 'Location').collect()
