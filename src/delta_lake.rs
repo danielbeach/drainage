@@ -672,7 +672,7 @@ impl DeltaLakeAnalyzer {
         sorted_files.sort_by_key(|f| {
             f.key
                 .split('/')
-                .last()
+                .next_back()
                 .and_then(|name| name.split('.').next())
                 .and_then(|version| version.parse::<u64>().ok())
                 .unwrap_or(0)
