@@ -1,5 +1,11 @@
 # Drainage 🌊
 
+[![CI](https://github.com/danielbeach/drainage/workflows/CI/badge.svg)](https://github.com/danielbeach/drainage/actions)
+[![codecov](https://codecov.io/gh/danielbeach/drainage/branch/main/graph/badge.svg)](https://codecov.io/gh/danielbeach/drainage)
+[![PyPI version](https://badge.fury.io/py/drainage.svg)](https://badge.fury.io/py/drainage)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org)
+
 🌊  D R A I N A G E  🦀    
 Rust + Python Lake House Health Analyzer 
 Detect • Diagnose • Optimize • Flow 
@@ -28,6 +34,7 @@ Drainage helps you understand and optimize your data lake by identifying issues 
   - **Apache Iceberg tables** (including clustering support)
 - **☁️ S3 Native**: Direct S3 integration for analyzing remote data lakes
 - **🐍 Python Interface**: Easy-to-use Python API powered by PyO3
+- **🧪 Comprehensive Testing**: Full test suite with CI/CD across multiple platforms
 
 ## Installation
 
@@ -569,13 +576,268 @@ maturin build --release
 
 ### Testing
 
+Drainage includes a comprehensive test suite covering both Rust and Python code, with automated CI/CD testing across multiple platforms and Python versions.
+
+#### Quick Start
+
+```bash
+# Install dependencies and run all tests
+make install build test
+
+# Or use the test runner script
+python run_tests.py --all
+```
+
+#### Test Categories
+
+**Rust Unit Tests**
 ```bash
 # Run Rust tests
+make test-rust
+# or
 cargo test
 
-# Run with example
-python examples/simple_analysis.py s3://your-bucket/your-table
+# Run with verbose output
+cargo test --verbose
+
+# Run specific test module
+cargo test types::tests
 ```
+
+**Python Tests**
+```bash
+# Run Python tests
+make test-python
+# or
+python -m pytest tests/ -v
+
+# Run with coverage
+make coverage
+# or
+python -m pytest tests/ --cov=drainage --cov-report=html
+```
+
+**Integration Tests**
+```bash
+# Run integration tests
+make test-integration
+# or
+python -m pytest tests/ -m integration -v
+```
+
+#### Test Infrastructure
+
+**Test Structure**
+```
+tests/
+├── __init__.py              # Test package initialization
+├── conftest.py              # Pytest configuration and fixtures
+├── test_drainage.py         # Main test suite for drainage module
+└── README.md               # Detailed testing documentation
+```
+
+**Test Markers**
+```bash
+# Run specific test categories
+python -m pytest tests/ -m unit -v          # Unit tests only
+python -m pytest tests/ -m integration -v   # Integration tests only
+python -m pytest tests/ -m mock -v          # Mock tests only
+python -m pytest tests/ -m real -v          # Real service tests only
+```
+
+#### Code Quality
+
+**Linting and Formatting**
+```bash
+# Run all linting checks
+make lint
+
+# Format code
+make format
+
+# Check Rust formatting
+cargo fmt -- --check
+
+# Check Rust linting
+cargo clippy -- -D warnings
+
+# Check Python formatting
+black --check tests/ examples/
+
+# Check Python linting
+flake8 tests/ examples/ --max-line-length=100
+```
+
+**Security Checks**
+```bash
+# Run security audits
+make security
+
+# Rust security audit
+cargo audit
+
+# Python security check
+safety check
+
+# Python security linting
+bandit -r tests/ examples/
+```
+
+#### Performance Testing
+
+```bash
+# Run performance benchmarks
+make perf
+# or
+python -m pytest tests/ -v --benchmark-only --benchmark-sort=mean
+```
+
+#### Development Workflow
+
+**Full CI Pipeline**
+```bash
+# Run complete CI pipeline locally
+make ci
+
+# Quick development test
+make quick-test
+
+# Pre-commit checks
+make pre-commit
+```
+
+**Git Hooks Setup**
+```bash
+# Setup pre-commit hooks
+make setup-hooks
+
+# Remove hooks
+make remove-hooks
+```
+
+#### Continuous Integration
+
+Drainage uses GitHub Actions for automated testing on:
+
+- **Operating Systems**: Ubuntu, Windows, macOS
+- **Python Versions**: 3.8, 3.9, 3.10, 3.11, 3.12
+- **Rust Versions**: Stable, Beta, Nightly
+
+**CI Pipeline Includes:**
+1. **Multi-Platform Testing**: Tests run on all supported platforms
+2. **Security Scanning**: Automated vulnerability detection
+3. **Performance Benchmarks**: Performance regression detection
+4. **Documentation Generation**: Automatic doc validation
+5. **Code Coverage**: Coverage reporting with Codecov integration
+6. **Artifact Building**: Wheel building for all platforms
+7. **Release Automation**: Automatic PyPI publishing
+
+#### Test Coverage
+
+The test suite provides comprehensive coverage:
+
+- **Unit Tests**: Individual function and method testing
+- **Integration Tests**: End-to-end workflow testing
+- **Mock Tests**: Testing with mocked dependencies
+- **Edge Cases**: Boundary conditions and error scenarios
+- **Performance Tests**: Benchmark and performance regression testing
+
+#### Writing Tests
+
+**Test Naming Convention**
+- Test files: `test_*.py`
+- Test classes: `Test*`
+- Test functions: `test_*`
+
+**Example Test**
+```python
+def test_analyze_delta_lake_parameters():
+    """Test analyze_delta_lake function parameters."""
+    with patch('drainage.analyze_delta_lake') as mock_analyze:
+        mock_report = MagicMock()
+        mock_analyze.return_value = mock_report
+        
+        result = drainage.analyze_delta_lake(
+            s3_path="s3://test-bucket/test-table/",
+            aws_region="us-west-2"
+        )
+        
+        mock_analyze.assert_called_once_with(
+            s3_path="s3://test-bucket/test-table/",
+            aws_access_key_id=None,
+            aws_secret_access_key=None,
+            aws_region="us-west-2"
+        )
+        assert result == mock_report
+```
+
+**Using Fixtures**
+```python
+def test_with_mock_report(mock_health_report):
+    """Test with mock health report."""
+    assert mock_health_report.table_path == "s3://test-bucket/test-table/"
+    assert mock_health_report.health_score == 0.85
+```
+
+#### Debugging Tests
+
+```bash
+# Run specific test file
+python -m pytest tests/test_drainage.py -v
+
+# Run specific test function
+python -m pytest tests/test_drainage.py::TestDrainageModule::test_analyze_delta_lake_parameters -v
+
+# Run tests matching pattern
+python -m pytest tests/ -k "delta_lake" -v
+
+# Debug mode
+python -m pytest tests/ -v -s --pdb
+```
+
+#### Available Make Targets
+
+```bash
+make help                    # Show all available targets
+make install                 # Install dependencies
+make build                   # Build the project
+make test                    # Run all tests
+make test-rust              # Run Rust tests only
+make test-python            # Run Python tests only
+make test-integration       # Run integration tests only
+make lint                    # Run linting checks
+make format                  # Format code
+make security               # Run security checks
+make coverage               # Run with coverage
+make clean                  # Clean build artifacts
+make release                # Build release version
+make docs                   # Generate documentation
+make ci                     # Run full CI pipeline
+make dev                    # Development setup
+make quick-test             # Quick test (unit tests only)
+make examples               # Test examples
+make check                  # Run all checks
+make pre-commit             # Pre-commit checks
+make post-commit            # Post-commit checks
+make setup-hooks            # Setup git hooks
+make remove-hooks           # Remove git hooks
+make info                   # Show project info
+```
+
+#### Troubleshooting
+
+**Common Issues**
+1. **Import Errors**: Ensure drainage module is built (`make build`)
+2. **Missing Dependencies**: Install all requirements (`make install`)
+3. **Permission Errors**: Check file permissions
+4. **Timeout Errors**: Increase timeout for slow tests
+
+**Getting Help**
+- Check test output for error messages
+- Use `-v` flag for verbose output
+- Use `--pdb` for debugging
+- Check CI logs for detailed error information
+- See `tests/README.md` for detailed testing documentation
 
 ## Performance
 
