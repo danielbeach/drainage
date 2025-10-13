@@ -90,11 +90,11 @@ pub struct HealthMetrics {
 #[pyclass]
 pub struct FileSizeDistribution {
     #[pyo3(get)]
-    pub small_files: usize,  // < 16MB
+    pub small_files: usize, // < 16MB
     #[pyo3(get)]
     pub medium_files: usize, // 16MB - 128MB
     #[pyo3(get)]
-    pub large_files: usize,  // 128MB - 1GB
+    pub large_files: usize, // 128MB - 1GB
     #[pyo3(get)]
     pub very_large_files: usize, // > 1GB
 }
@@ -161,6 +161,12 @@ pub struct HealthReport {
     pub health_score: f64, // 0.0 to 1.0
 }
 
+impl Default for HealthMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HealthMetrics {
     pub fn new() -> Self {
         Self {
@@ -212,25 +218,27 @@ impl HealthMetrics {
 
     pub fn calculate_health_score(&self) -> f64 {
         let mut score = 1.0;
-        
+
         // Penalize unreferenced files
         if self.total_files > 0 {
             let unreferenced_ratio = self.unreferenced_files.len() as f64 / self.total_files as f64;
             score -= unreferenced_ratio * 0.3;
         }
-        
+
         // Penalize small files (inefficient)
         if self.total_files > 0 {
-            let small_file_ratio = self.file_size_distribution.small_files as f64 / self.total_files as f64;
+            let small_file_ratio =
+                self.file_size_distribution.small_files as f64 / self.total_files as f64;
             score -= small_file_ratio * 0.2;
         }
-        
+
         // Penalize very large files (potential performance issues)
         if self.total_files > 0 {
-            let very_large_ratio = self.file_size_distribution.very_large_files as f64 / self.total_files as f64;
+            let very_large_ratio =
+                self.file_size_distribution.very_large_files as f64 / self.total_files as f64;
             score -= very_large_ratio * 0.1;
         }
-        
+
         // Reward good partitioning
         if self.partition_count > 0 && self.total_files > 0 {
             let avg_files_per_partition = self.total_files as f64 / self.partition_count as f64;
@@ -240,47 +248,48 @@ impl HealthMetrics {
                 score -= 0.05; // Too few files per partition
             }
         }
-        
+
         // Penalize data skew
         score -= self.data_skew.partition_skew_score * 0.15;
         score -= self.data_skew.file_size_skew_score * 0.1;
-        
+
         // Penalize metadata bloat
-        if self.metadata_health.metadata_total_size_bytes > 100 * 1024 * 1024 { // > 100MB
+        if self.metadata_health.metadata_total_size_bytes > 100 * 1024 * 1024 {
+            // > 100MB
             score -= 0.05;
         }
-        
+
         // Penalize snapshot retention issues
         score -= self.snapshot_health.snapshot_retention_risk * 0.1;
-        
+
         // Penalize deletion vector impact
         if let Some(ref dv_metrics) = self.deletion_vector_metrics {
             score -= dv_metrics.deletion_vector_impact_score * 0.15;
         }
-        
+
         // Factor in schema stability
         if let Some(ref schema_metrics) = self.schema_evolution {
             score -= (1.0 - schema_metrics.schema_stability_score) * 0.2;
         }
-        
+
         // Factor in time travel storage costs
         if let Some(ref tt_metrics) = self.time_travel_metrics {
             score -= tt_metrics.storage_cost_impact_score * 0.1;
             score -= (1.0 - tt_metrics.retention_efficiency_score) * 0.05;
         }
-        
+
         // Factor in data quality from constraints
         if let Some(ref constraint_metrics) = self.table_constraints {
             score -= (1.0 - constraint_metrics.data_quality_score) * 0.15;
             score -= constraint_metrics.constraint_violation_risk * 0.1;
         }
-        
+
         // Factor in file compaction opportunities
         if let Some(ref compaction_metrics) = self.file_compaction {
             score -= (1.0 - compaction_metrics.compaction_opportunity_score) * 0.1;
         }
-        
-        score.max(0.0).min(1.0)
+
+        score.clamp(0.0, 1.0)
     }
 
     pub fn calculate_data_skew(&mut self) {
@@ -288,21 +297,28 @@ impl HealthMetrics {
             return;
         }
 
-        let partition_sizes: Vec<u64> = self.partitions.iter().map(|p| p.total_size_bytes).collect();
+        let partition_sizes: Vec<u64> =
+            self.partitions.iter().map(|p| p.total_size_bytes).collect();
         let file_counts: Vec<usize> = self.partitions.iter().map(|p| p.file_count).collect();
 
         // Calculate partition size skew
         if !partition_sizes.is_empty() {
             let total_size: u64 = partition_sizes.iter().sum();
             let avg_size = total_size as f64 / partition_sizes.len() as f64;
-            
-            let variance = partition_sizes.iter()
+
+            let variance = partition_sizes
+                .iter()
                 .map(|&size| (size as f64 - avg_size).powi(2))
-                .sum::<f64>() / partition_sizes.len() as f64;
-            
+                .sum::<f64>()
+                / partition_sizes.len() as f64;
+
             let std_dev = variance.sqrt();
-            let coefficient_of_variation = if avg_size > 0.0 { std_dev / avg_size } else { 0.0 };
-            
+            let coefficient_of_variation = if avg_size > 0.0 {
+                std_dev / avg_size
+            } else {
+                0.0
+            };
+
             self.data_skew.partition_skew_score = coefficient_of_variation.min(1.0);
             self.data_skew.largest_partition_size = *partition_sizes.iter().max().unwrap_or(&0);
             self.data_skew.smallest_partition_size = *partition_sizes.iter().min().unwrap_or(&0);
@@ -314,39 +330,46 @@ impl HealthMetrics {
         if !file_counts.is_empty() {
             let total_files: usize = file_counts.iter().sum();
             let avg_files = total_files as f64 / file_counts.len() as f64;
-            
-            let variance = file_counts.iter()
+
+            let variance = file_counts
+                .iter()
                 .map(|&count| (count as f64 - avg_files).powi(2))
-                .sum::<f64>() / file_counts.len() as f64;
-            
+                .sum::<f64>()
+                / file_counts.len() as f64;
+
             let std_dev = variance.sqrt();
-            let coefficient_of_variation = if avg_files > 0.0 { std_dev / avg_files } else { 0.0 };
-            
+            let coefficient_of_variation = if avg_files > 0.0 {
+                std_dev / avg_files
+            } else {
+                0.0
+            };
+
             self.data_skew.file_size_skew_score = coefficient_of_variation.min(1.0);
         }
     }
 
     pub fn calculate_metadata_health(&mut self, metadata_files: &[crate::s3_client::ObjectInfo]) {
         self.metadata_health.metadata_file_count = metadata_files.len();
-        self.metadata_health.metadata_total_size_bytes = metadata_files.iter().map(|f| f.size as u64).sum();
-        
+        self.metadata_health.metadata_total_size_bytes =
+            metadata_files.iter().map(|f| f.size as u64).sum();
+
         if !metadata_files.is_empty() {
-            self.metadata_health.avg_metadata_file_size = 
+            self.metadata_health.avg_metadata_file_size =
                 self.metadata_health.metadata_total_size_bytes as f64 / metadata_files.len() as f64;
         }
-        
+
         // Estimate growth rate (simplified - would need historical data for accuracy)
         self.metadata_health.metadata_growth_rate = 0.0; // Placeholder
     }
 
     pub fn calculate_snapshot_health(&mut self, snapshot_count: usize) {
         self.snapshot_health.snapshot_count = snapshot_count;
-        
+
         // Simplified snapshot age calculation (would need actual timestamps)
         self.snapshot_health.oldest_snapshot_age_days = 0.0;
         self.snapshot_health.newest_snapshot_age_days = 0.0;
         self.snapshot_health.avg_snapshot_age_days = 0.0;
-        
+
         // Calculate retention risk based on snapshot count
         if snapshot_count > 100 {
             self.snapshot_health.snapshot_retention_risk = 0.8;
@@ -470,5 +493,214 @@ impl HealthReport {
             metrics: HealthMetrics::new(),
             health_score: 0.0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_health_metrics_new() {
+        let metrics = HealthMetrics::new();
+
+        assert_eq!(metrics.total_files, 0);
+        assert_eq!(metrics.total_size_bytes, 0);
+        assert_eq!(metrics.unreferenced_files.len(), 0);
+        assert_eq!(metrics.unreferenced_size_bytes, 0);
+        assert_eq!(metrics.partition_count, 0);
+        assert_eq!(metrics.partitions.len(), 0);
+        assert!(metrics.clustering.is_none());
+        assert_eq!(metrics.avg_file_size_bytes, 0.0);
+        assert_eq!(metrics.file_size_distribution.small_files, 0);
+        assert_eq!(metrics.file_size_distribution.medium_files, 0);
+        assert_eq!(metrics.file_size_distribution.large_files, 0);
+        assert_eq!(metrics.file_size_distribution.very_large_files, 0);
+        assert_eq!(metrics.recommendations.len(), 0);
+        assert_eq!(metrics.health_score, 0.0);
+    }
+
+    #[test]
+    fn test_health_score_calculation_perfect_health() {
+        let mut metrics = HealthMetrics::new();
+        metrics.total_files = 100;
+        metrics.file_size_distribution = FileSizeDistribution {
+            small_files: 0,
+            medium_files: 100,
+            large_files: 0,
+            very_large_files: 0,
+        };
+        metrics.partition_count = 10;
+        metrics.data_skew = DataSkewMetrics {
+            partition_skew_score: 0.0,
+            file_size_skew_score: 0.0,
+            largest_partition_size: 1000,
+            smallest_partition_size: 1000,
+            avg_partition_size: 1000,
+            partition_size_std_dev: 0.0,
+        };
+        metrics.snapshot_health = SnapshotHealth {
+            snapshot_count: 5,
+            oldest_snapshot_age_days: 1.0,
+            newest_snapshot_age_days: 0.0,
+            avg_snapshot_age_days: 0.5,
+            snapshot_retention_risk: 0.0,
+        };
+
+        let score = metrics.calculate_health_score();
+        assert!(
+            (score - 1.0).abs() < 0.01,
+            "Expected perfect health score, got {}",
+            score
+        );
+    }
+
+    #[test]
+    fn test_health_score_calculation_with_unreferenced_files() {
+        let mut metrics = HealthMetrics::new();
+        metrics.total_files = 100;
+        metrics.unreferenced_files = vec![
+            FileInfo {
+                path: "unreferenced1.parquet".to_string(),
+                size_bytes: 1000,
+                last_modified: None,
+                is_referenced: false,
+            },
+            FileInfo {
+                path: "unreferenced2.parquet".to_string(),
+                size_bytes: 2000,
+                last_modified: None,
+                is_referenced: false,
+            },
+        ];
+        metrics.file_size_distribution = FileSizeDistribution {
+            small_files: 0,
+            medium_files: 100,
+            large_files: 0,
+            very_large_files: 0,
+        };
+        metrics.partition_count = 10;
+        metrics.data_skew = DataSkewMetrics {
+            partition_skew_score: 0.0,
+            file_size_skew_score: 0.0,
+            largest_partition_size: 1000,
+            smallest_partition_size: 1000,
+            avg_partition_size: 1000,
+            partition_size_std_dev: 0.0,
+        };
+        metrics.snapshot_health = SnapshotHealth {
+            snapshot_count: 5,
+            oldest_snapshot_age_days: 1.0,
+            newest_snapshot_age_days: 0.0,
+            avg_snapshot_age_days: 0.5,
+            snapshot_retention_risk: 0.0,
+        };
+
+        let score = metrics.calculate_health_score();
+        // Should be penalized by 2% (2 unreferenced files out of 100 total)
+        let expected_penalty = 0.02 * 0.3; // 2% * 30% penalty
+        let expected_score = 1.0 - expected_penalty;
+        assert!(
+            (score - expected_score).abs() < 0.01,
+            "Expected score ~{}, got {}",
+            expected_score,
+            score
+        );
+    }
+
+    #[test]
+    fn test_calculate_data_skew_empty_partitions() {
+        let mut metrics = HealthMetrics::new();
+        metrics.partitions = vec![];
+
+        metrics.calculate_data_skew();
+
+        // Should not crash and should keep default values
+        assert_eq!(metrics.data_skew.partition_skew_score, 0.0);
+        assert_eq!(metrics.data_skew.file_size_skew_score, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_data_skew_perfect_distribution() {
+        let mut metrics = HealthMetrics::new();
+        metrics.partitions = vec![
+            PartitionInfo {
+                partition_values: HashMap::new(),
+                file_count: 10,
+                total_size_bytes: 1000,
+                avg_file_size_bytes: 100.0,
+                files: vec![],
+            },
+            PartitionInfo {
+                partition_values: HashMap::new(),
+                file_count: 10,
+                total_size_bytes: 1000,
+                avg_file_size_bytes: 100.0,
+                files: vec![],
+            },
+            PartitionInfo {
+                partition_values: HashMap::new(),
+                file_count: 10,
+                total_size_bytes: 1000,
+                avg_file_size_bytes: 100.0,
+                files: vec![],
+            },
+        ];
+
+        metrics.calculate_data_skew();
+
+        // Perfect distribution should have 0 skew
+        assert_eq!(metrics.data_skew.partition_skew_score, 0.0);
+        assert_eq!(metrics.data_skew.file_size_skew_score, 0.0);
+        assert_eq!(metrics.data_skew.largest_partition_size, 1000);
+        assert_eq!(metrics.data_skew.smallest_partition_size, 1000);
+        assert_eq!(metrics.data_skew.avg_partition_size, 1000);
+    }
+
+    #[test]
+    fn test_calculate_metadata_health() {
+        let mut metrics = HealthMetrics::new();
+        let metadata_files = vec![
+            crate::s3_client::ObjectInfo {
+                key: "metadata1.json".to_string(),
+                size: 1000,
+                last_modified: Some("2023-01-01T00:00:00Z".to_string()),
+                etag: Some("etag1".to_string()),
+            },
+            crate::s3_client::ObjectInfo {
+                key: "metadata2.json".to_string(),
+                size: 2000,
+                last_modified: Some("2023-01-02T00:00:00Z".to_string()),
+                etag: Some("etag2".to_string()),
+            },
+        ];
+
+        metrics.calculate_metadata_health(&metadata_files);
+
+        assert_eq!(metrics.metadata_health.metadata_file_count, 2);
+        assert_eq!(metrics.metadata_health.metadata_total_size_bytes, 3000);
+        assert_eq!(metrics.metadata_health.avg_metadata_file_size, 1500.0);
+    }
+
+    #[test]
+    fn test_calculate_snapshot_health_low_risk() {
+        let mut metrics = HealthMetrics::new();
+
+        metrics.calculate_snapshot_health(5);
+
+        assert_eq!(metrics.snapshot_health.snapshot_count, 5);
+        assert_eq!(metrics.snapshot_health.snapshot_retention_risk, 0.0);
+    }
+
+    #[test]
+    fn test_health_report_new() {
+        let report = HealthReport::new("s3://bucket/table".to_string(), "delta".to_string());
+
+        assert_eq!(report.table_path, "s3://bucket/table");
+        assert_eq!(report.table_type, "delta");
+        assert!(!report.analysis_timestamp.is_empty());
+        assert_eq!(report.health_score, 0.0);
+        assert_eq!(report.metrics.total_files, 0);
     }
 }
