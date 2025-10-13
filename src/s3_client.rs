@@ -1,6 +1,6 @@
-use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_s3::{Client as S3Client, config::Region, config::Credentials};
 use anyhow::Result;
+use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_s3::{config::Credentials, config::Region, Client as S3Client};
 use url::Url;
 
 pub struct S3ClientWrapper {
@@ -17,7 +17,8 @@ impl S3ClientWrapper {
         aws_region: Option<String>,
     ) -> Result<Self> {
         let url = Url::parse(s3_path)?;
-        let bucket = url.host_str()
+        let bucket = url
+            .host_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid S3 URL: missing bucket"))?
             .to_string();
         let prefix = url.path().trim_start_matches('/').to_string();
@@ -25,10 +26,15 @@ impl S3ClientWrapper {
         let region = if let Some(region_str) = aws_region {
             Region::new(region_str)
         } else {
-            RegionProviderChain::default_provider().region().await.unwrap_or_else(|| Region::new("us-east-1"))
+            RegionProviderChain::default_provider()
+                .region()
+                .await
+                .unwrap_or_else(|| Region::new("us-east-1"))
         };
 
-        let config = if let (Some(access_key), Some(secret_key)) = (aws_access_key_id, aws_secret_access_key) {
+        let config = if let (Some(access_key), Some(secret_key)) =
+            (aws_access_key_id, aws_secret_access_key)
+        {
             let creds = Credentials::new(access_key, secret_key, None, None, "drainage");
             aws_config::from_env()
                 .region(region)
@@ -36,10 +42,7 @@ impl S3ClientWrapper {
                 .load()
                 .await
         } else {
-            aws_config::from_env()
-                .region(region)
-                .load()
-                .await
+            aws_config::from_env().region(region).load().await
         };
 
         let client = S3Client::new(&config);
@@ -56,7 +59,8 @@ impl S3ClientWrapper {
         let mut continuation_token: Option<String> = None;
 
         loop {
-            let mut request = self.client
+            let mut request = self
+                .client
                 .list_objects_v2()
                 .bucket(&self.bucket)
                 .prefix(prefix);
@@ -89,7 +93,8 @@ impl S3ClientWrapper {
     }
 
     pub async fn get_object(&self, key: &str) -> Result<Vec<u8>> {
-        let response = self.client
+        let response = self
+            .client
             .get_object()
             .bucket(&self.bucket)
             .key(key)
@@ -130,10 +135,13 @@ mod tests {
             last_modified: Some("2023-01-01T00:00:00Z".to_string()),
             etag: Some("etag123".to_string()),
         };
-        
+
         assert_eq!(object_info.key, "test/file.parquet");
         assert_eq!(object_info.size, 1024);
-        assert_eq!(object_info.last_modified, Some("2023-01-01T00:00:00Z".to_string()));
+        assert_eq!(
+            object_info.last_modified,
+            Some("2023-01-01T00:00:00Z".to_string())
+        );
         assert_eq!(object_info.etag, Some("etag123".to_string()));
     }
 
@@ -145,7 +153,7 @@ mod tests {
             last_modified: Some("2023-01-01T00:00:00Z".to_string()),
             etag: Some("etag123".to_string()),
         };
-        
+
         let cloned = object_info.clone();
         assert_eq!(cloned.key, object_info.key);
         assert_eq!(cloned.size, object_info.size);
@@ -157,7 +165,7 @@ mod tests {
     fn test_s3_url_parsing_valid() {
         let s3_path = "s3://my-bucket/my-table/";
         let url = Url::parse(s3_path).unwrap();
-        
+
         assert_eq!(url.scheme(), "s3");
         assert_eq!(url.host_str(), Some("my-bucket"));
         assert_eq!(url.path(), "/my-table/");
@@ -167,7 +175,7 @@ mod tests {
     fn test_s3_url_parsing_with_prefix() {
         let s3_path = "s3://my-bucket/my-table/year=2023/month=01/";
         let url = Url::parse(s3_path).unwrap();
-        
+
         assert_eq!(url.scheme(), "s3");
         assert_eq!(url.host_str(), Some("my-bucket"));
         assert_eq!(url.path(), "/my-table/year=2023/month=01/");
@@ -184,10 +192,10 @@ mod tests {
     fn test_s3_path_components_extraction() {
         let s3_path = "s3://my-bucket/my-table/year=2023/month=01/";
         let url = Url::parse(s3_path).unwrap();
-        
+
         let bucket = url.host_str().unwrap().to_string();
         let prefix = url.path().trim_start_matches('/').to_string();
-        
+
         assert_eq!(bucket, "my-bucket");
         assert_eq!(prefix, "my-table/year=2023/month=01/");
     }
@@ -196,10 +204,10 @@ mod tests {
     fn test_s3_path_components_extraction_no_trailing_slash() {
         let s3_path = "s3://my-bucket/my-table";
         let url = Url::parse(s3_path).unwrap();
-        
+
         let bucket = url.host_str().unwrap().to_string();
         let prefix = url.path().trim_start_matches('/').to_string();
-        
+
         assert_eq!(bucket, "my-bucket");
         assert_eq!(prefix, "my-table");
     }
@@ -208,7 +216,7 @@ mod tests {
     fn test_aws_region_creation() {
         let region_str = "us-west-2";
         let region = aws_sdk_s3::config::Region::new(region_str);
-        
+
         assert_eq!(region.as_ref(), "us-west-2");
     }
 
@@ -216,15 +224,10 @@ mod tests {
     fn test_aws_credentials_creation() {
         let access_key = "AKIAIOSFODNN7EXAMPLE";
         let secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
-        
-        let creds = aws_sdk_s3::config::Credentials::new(
-            access_key,
-            secret_key,
-            None,
-            None,
-            "drainage"
-        );
-        
+
+        let creds =
+            aws_sdk_s3::config::Credentials::new(access_key, secret_key, None, None, "drainage");
+
         assert_eq!(creds.access_key_id(), access_key);
         assert_eq!(creds.secret_access_key(), secret_key);
         assert_eq!(creds.session_token(), None);
@@ -240,11 +243,11 @@ mod tests {
             "s3://my-bucket-name/my-table/",
             "s3://bucket.with.dots/table/",
         ];
-        
+
         for path in valid_paths {
             let result = Url::parse(path);
             assert!(result.is_ok(), "Failed to parse valid S3 path: {}", path);
-            
+
             let url = result.unwrap();
             assert_eq!(url.scheme(), "s3");
             assert!(url.host_str().is_some(), "Missing bucket in path: {}", path);
@@ -259,14 +262,14 @@ mod tests {
             last_modified: Some("2023-01-01T00:00:00Z".to_string()),
             etag: Some("etag123".to_string()),
         };
-        
+
         let object_info_minimal = ObjectInfo {
             key: "test/file.parquet".to_string(),
             size: 1024,
             last_modified: None,
             etag: None,
         };
-        
+
         assert!(object_info_with_all.last_modified.is_some());
         assert!(object_info_with_all.etag.is_some());
         assert!(object_info_minimal.last_modified.is_none());
