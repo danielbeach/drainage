@@ -17,18 +17,57 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         include:
           - os: ubuntu-latest
+            python-version: '3.8'
             rust-version: stable
           - os: ubuntu-latest
+            python-version: '3.9'
+            rust-version: stable
+          - os: ubuntu-latest
+            python-version: '3.10'
+            rust-version: stable
+          - os: ubuntu-latest
+            python-version: '3.11'
+            rust-version: stable
+          - os: ubuntu-latest
+            python-version: '3.12'
+            rust-version: stable
+          - os: ubuntu-latest
+            python-version: '3.11'
             rust-version: beta
           - os: ubuntu-latest
+            python-version: '3.11'
             rust-version: nightly
           - os: windows-latest
+            python-version: '3.8'
+            rust-version: stable
+          - os: windows-latest
+            python-version: '3.9'
+            rust-version: stable
+          - os: windows-latest
+            python-version: '3.10'
+            rust-version: stable
+          - os: windows-latest
+            python-version: '3.11'
+            rust-version: stable
+          - os: windows-latest
+            python-version: '3.12'
             rust-version: stable
           - os: macos-latest
+            python-version: '3.8'
+            rust-version: stable
+          - os: macos-latest
+            python-version: '3.9'
+            rust-version: stable
+          - os: macos-latest
+            python-version: '3.10'
+            rust-version: stable
+          - os: macos-latest
+            python-version: '3.11'
+            rust-version: stable
+          - os: macos-latest
+            python-version: '3.12'
             rust-version: stable
 
     steps:
@@ -42,7 +81,7 @@ jobs:
         components: rustfmt, clippy
 
     - name: Cache Rust dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -58,7 +97,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache Python dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -98,7 +137,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && matrix.rust-version == 'stable'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         flags: unittests
@@ -110,8 +149,37 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        include:
+          - os: ubuntu-latest
+            python-version: '3.8'
+          - os: ubuntu-latest
+            python-version: '3.9'
+          - os: ubuntu-latest
+            python-version: '3.10'
+          - os: ubuntu-latest
+            python-version: '3.11'
+          - os: ubuntu-latest
+            python-version: '3.12'
+          - os: windows-latest
+            python-version: '3.8'
+          - os: windows-latest
+            python-version: '3.9'
+          - os: windows-latest
+            python-version: '3.10'
+          - os: windows-latest
+            python-version: '3.11'
+          - os: windows-latest
+            python-version: '3.12'
+          - os: macos-latest
+            python-version: '3.8'
+          - os: macos-latest
+            python-version: '3.9'
+          - os: macos-latest
+            python-version: '3.10'
+          - os: macos-latest
+            python-version: '3.11'
+          - os: macos-latest
+            python-version: '3.12'
 
     steps:
     - name: Checkout code
@@ -124,7 +192,7 @@ jobs:
         components: rustfmt, clippy
 
     - name: Cache Rust dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -148,7 +216,7 @@ jobs:
       run: maturin build --release
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}
         path: target/wheels/*.whl
@@ -187,7 +255,7 @@ jobs:
       run: bandit -r tests/ examples/ -f json -o bandit-report.json || true
 
     - name: Upload security report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-report
         path: bandit-report.json
@@ -259,7 +327,7 @@ jobs:
         python -c "import drainage; print(drainage.analyze_table.__doc__)"
 
     - name: Upload documentation
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: drainage_help.txt
