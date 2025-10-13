@@ -13,19 +13,19 @@ import drainage
 def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
     """
     Analyze a Delta Lake table and print comprehensive health report.
-    
+
     Args:
         s3_path: S3 path to the Delta table (e.g., s3://bucket/path/to/table)
         aws_region: AWS region (defaults to us-west-2)
     """
-    
+
     print(f"\n{'='*70}")
-    print(f"Analyzing Delta Lake Table")
+    print("Analyzing Delta Lake Table")
     print(f"{'='*70}\n")
     print(f"📍 Location: {s3_path}")
     print(f"🌎 Region: {aws_region}")
-    print(f"\nAnalyzing... This may take a few moments...\n")
-    
+    print("\nAnalyzing... This may take a few moments...\n")
+
     try:
         # Run the analysis
         report = drainage.analyze_delta_lake(
@@ -34,22 +34,28 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
             # aws_access_key_id=None,  # Optional - uses default credentials
             # aws_secret_access_key=None,  # Optional - uses default credentials
         )
-        
+
         # Print header
         print(f"{'='*70}")
-        print(f"Analysis Complete!")
+        print("Analysis Complete!")
         print(f"{'='*70}\n")
-        
+
         # Overall health score
-        health_emoji = "🟢" if report.health_score > 0.8 else "🟡" if report.health_score > 0.6 else "🔴"
+        health_emoji = (
+            "🟢"
+            if report.health_score > 0.8
+            else "🟡"
+            if report.health_score > 0.6
+            else "🔴"
+        )
         print(f"{health_emoji} Overall Health Score: {report.health_score:.1%}")
         print(f"📅 Analysis Timestamp: {report.analysis_timestamp}\n")
-        
+
         # Key metrics
-        print(f"📊 Key Metrics:")
+        print("📊 Key Metrics:")
         print(f"{'─'*70}")
         print(f"  Total Files:         {report.metrics.total_files:,}")
-        
+
         # Format size in GB or MB
         size_gb = report.metrics.total_size_bytes / (1024**3)
         if size_gb >= 1:
@@ -57,49 +63,74 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
         else:
             size_mb = report.metrics.total_size_bytes / (1024**2)
             print(f"  Total Size:          {size_mb:.2f} MB")
-        
+
         # Average file size
         avg_mb = report.metrics.avg_file_size_bytes / (1024**2)
         print(f"  Average File Size:   {avg_mb:.2f} MB")
         print(f"  Partition Count:     {report.metrics.partition_count:,}\n")
-        
+
         # File size distribution
-        print(f"📦 File Size Distribution:")
+        print("📦 File Size Distribution:")
         print(f"{'─'*70}")
         dist = report.metrics.file_size_distribution
-        total_files = (dist.small_files + dist.medium_files + 
-                      dist.large_files + dist.very_large_files)
-        
+        total_files = (
+            dist.small_files
+            + dist.medium_files
+            + dist.large_files
+            + dist.very_large_files
+        )
+
         if total_files > 0:
-            print(f"  Small (<16MB):       {dist.small_files:>6} files ({dist.small_files/total_files*100:>5.1f}%)")
-            print(f"  Medium (16-128MB):   {dist.medium_files:>6} files ({dist.medium_files/total_files*100:>5.1f}%)")
-            print(f"  Large (128MB-1GB):   {dist.large_files:>6} files ({dist.large_files/total_files*100:>5.1f}%)")
-            print(f"  Very Large (>1GB):   {dist.very_large_files:>6} files ({dist.very_large_files/total_files*100:>5.1f}%)\n")
-        
+            small_pct = dist.small_files / total_files * 100
+            medium_pct = dist.medium_files / total_files * 100
+            large_pct = dist.large_files / total_files * 100
+            very_large_pct = dist.very_large_files / total_files * 100
+
+            print(
+                f"  Small (<16MB):       {dist.small_files:>6} files "
+                f"({small_pct:>5.1f}%)"
+            )
+            print(
+                f"  Medium (16-128MB):   {dist.medium_files:>6} files "
+                f"({medium_pct:>5.1f}%)"
+            )
+            print(
+                f"  Large (128MB-1GB):   {dist.large_files:>6} files "
+                f"({large_pct:>5.1f}%)"
+            )
+            print(
+                f"  Very Large (>1GB):   {dist.very_large_files:>6} files "
+                f"({very_large_pct:>5.1f}%)\n"
+            )
+
         # Partition analysis
         if report.metrics.partitions:
-            print(f"🗂️  Partition Analysis:")
+            print("🗂️  Partition Analysis:")
             print(f"{'─'*70}")
             print(f"  Total Partitions: {len(report.metrics.partitions):,}")
-            
+
             # Show top 5 largest partitions
-            sorted_partitions = sorted(report.metrics.partitions, 
-                                      key=lambda p: p.total_size_bytes, 
-                                      reverse=True)[:5]
-            
+            sorted_partitions = sorted(
+                report.metrics.partitions,
+                key=lambda p: p.total_size_bytes,
+                reverse=True,
+            )[:5]
+
             if sorted_partitions:
-                print(f"\n  Top 5 Largest Partitions:")
+                print("\n  Top 5 Largest Partitions:")
                 for i, part in enumerate(sorted_partitions, 1):
                     part_size_mb = part.total_size_bytes / (1024**2)
                     avg_file_mb = part.avg_file_size_bytes / (1024**2)
-                    print(f"    {i}. Files: {part.file_count:>4}, "
-                          f"Size: {part_size_mb:>8.2f} MB, "
-                          f"Avg: {avg_file_mb:>6.2f} MB")
+                    print(
+                        f"    {i}. Files: {part.file_count:>4}, "
+                        f"Size: {part_size_mb:>8.2f} MB, "
+                        f"Avg: {avg_file_mb:>6.2f} MB"
+                    )
             print()
-        
+
         # Unreferenced files warning
         if report.metrics.unreferenced_files:
-            print(f"⚠️  Unreferenced Files:")
+            print("⚠️  Unreferenced Files:")
             print(f"{'─'*70}")
             print(f"  Count:  {len(report.metrics.unreferenced_files):,}")
             wasted_gb = report.metrics.unreferenced_size_bytes / (1024**3)
@@ -108,24 +139,24 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
             else:
                 wasted_mb = report.metrics.unreferenced_size_bytes / (1024**2)
                 print(f"  Wasted: {wasted_mb:.2f} MB")
-            
-            print(f"\n  These files exist in S3 but are not referenced in the")
-            print(f"  Delta transaction log. Consider cleaning them up.\n")
-        
+
+            print("\n  These files exist in S3 but are not referenced in the")
+            print("  Delta transaction log. Consider cleaning them up.\n")
+
         # Recommendations
         if report.metrics.recommendations:
-            print(f"💡 Recommendations:")
+            print("💡 Recommendations:")
             print(f"{'─'*70}")
             for i, rec in enumerate(report.metrics.recommendations, 1):
                 print(f"  {i}. {rec}")
             print()
         else:
-            print(f"✅ No recommendations - table is in good health!\n")
-        
+            print("✅ No recommendations - table is in good health!\n")
+
         print(f"{'='*70}\n")
-        
+
         return report
-        
+
     except Exception as e:
         print(f"\n❌ Error analyzing table: {e}\n")
         sys.exit(1)
@@ -138,9 +169,8 @@ if __name__ == "__main__":
         print("\nExample:")
         print("  python analyze_delta_table.py s3://my-bucket/my-delta-table us-west-2")
         sys.exit(1)
-    
+
     s3_path = sys.argv[1]
     aws_region = sys.argv[2] if len(sys.argv) > 2 else "us-west-2"
-    
-    analyze_delta_table(s3_path, aws_region)
 
+    analyze_delta_table(s3_path, aws_region)

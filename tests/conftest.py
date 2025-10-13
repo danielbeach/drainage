@@ -34,7 +34,7 @@ def mock_health_report():
     mock_report.table_type = "delta"
     mock_report.analysis_timestamp = "2023-01-01T00:00:00Z"
     mock_report.health_score = 0.85
-    
+
     # Mock metrics
     mock_report.metrics = MagicMock()
     mock_report.metrics.total_files = 100
@@ -46,14 +46,14 @@ def mock_health_report():
     mock_report.metrics.partitions = []
     mock_report.metrics.clustering = None
     mock_report.metrics.recommendations = []
-    
+
     # Mock file size distribution
     mock_report.metrics.file_size_distribution = MagicMock()
     mock_report.metrics.file_size_distribution.small_files = 10
     mock_report.metrics.file_size_distribution.medium_files = 80
     mock_report.metrics.file_size_distribution.large_files = 10
     mock_report.metrics.file_size_distribution.very_large_files = 0
-    
+
     # Mock data skew metrics
     mock_report.metrics.data_skew = MagicMock()
     mock_report.metrics.data_skew.partition_skew_score = 0.1
@@ -62,7 +62,7 @@ def mock_health_report():
     mock_report.metrics.data_skew.smallest_partition_size = 1024 * 1024 * 5
     mock_report.metrics.data_skew.avg_partition_size = 1024 * 1024 * 10
     mock_report.metrics.data_skew.partition_size_std_dev = 1024 * 1024 * 2
-    
+
     # Mock metadata health
     mock_report.metrics.metadata_health = MagicMock()
     mock_report.metrics.metadata_health.metadata_file_count = 5
@@ -70,7 +70,7 @@ def mock_health_report():
     mock_report.metrics.metadata_health.avg_metadata_file_size = 1024 * 200
     mock_report.metrics.metadata_health.metadata_growth_rate = 0.0
     mock_report.metrics.metadata_health.manifest_file_count = 0
-    
+
     # Mock snapshot health
     mock_report.metrics.snapshot_health = MagicMock()
     mock_report.metrics.snapshot_health.snapshot_count = 5
@@ -78,14 +78,14 @@ def mock_health_report():
     mock_report.metrics.snapshot_health.oldest_snapshot_age_days = 1.0
     mock_report.metrics.snapshot_health.newest_snapshot_age_days = 0.0
     mock_report.metrics.snapshot_health.avg_snapshot_age_days = 0.5
-    
+
     # Mock optional metrics
     mock_report.metrics.deletion_vector_metrics = None
     mock_report.metrics.schema_evolution = None
     mock_report.metrics.time_travel_metrics = None
     mock_report.metrics.table_constraints = None
     mock_report.metrics.file_compaction = None
-    
+
     return mock_report
 
 
@@ -93,10 +93,30 @@ def mock_health_report():
 def mock_delta_lake_objects():
     """Create mock Delta Lake objects for testing."""
     return [
-        MagicMock(key="part-00000.parquet", size=1024*1024, last_modified="2023-01-01T00:00:00Z", etag="etag1"),
-        MagicMock(key="part-00001.parquet", size=1024*1024, last_modified="2023-01-01T00:00:00Z", etag="etag2"),
-        MagicMock(key="_delta_log/00000000000000000000.json", size=2048, last_modified="2023-01-01T00:00:00Z", etag="etag3"),
-        MagicMock(key="_delta_log/00000000000000000001.json", size=1024, last_modified="2023-01-01T00:00:00Z", etag="etag4"),
+        MagicMock(
+            key="part-00000.parquet",
+            size=1024 * 1024,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag1",
+        ),
+        MagicMock(
+            key="part-00001.parquet",
+            size=1024 * 1024,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag2",
+        ),
+        MagicMock(
+            key="_delta_log/00000000000000000000.json",
+            size=2048,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag3",
+        ),
+        MagicMock(
+            key="_delta_log/00000000000000000001.json",
+            size=1024,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag4",
+        ),
     ]
 
 
@@ -104,10 +124,30 @@ def mock_delta_lake_objects():
 def mock_iceberg_objects():
     """Create mock Iceberg objects for testing."""
     return [
-        MagicMock(key="data/00000-0-00000000000000000000-00000000000000000000.parquet", size=1024*1024, last_modified="2023-01-01T00:00:00Z", etag="etag1"),
-        MagicMock(key="data/00000-1-00000000000000000000-00000000000000000000.parquet", size=1024*1024, last_modified="2023-01-01T00:00:00Z", etag="etag2"),
-        MagicMock(key="metadata/00000-00000000000000000000.metadata.json", size=2048, last_modified="2023-01-01T00:00:00Z", etag="etag3"),
-        MagicMock(key="metadata/snap-00000000000000000000-1-00000000000000000000.avro", size=1024, last_modified="2023-01-01T00:00:00Z", etag="etag4"),
+        MagicMock(
+            key="data/00000-0-00000000000000000000-00000000000000000000.parquet",
+            size=1024 * 1024,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag1",
+        ),
+        MagicMock(
+            key="data/00000-1-00000000000000000000-00000000000000000000.parquet",
+            size=1024 * 1024,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag2",
+        ),
+        MagicMock(
+            key="metadata/00000-00000000000000000000.metadata.json",
+            size=2048,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag3",
+        ),
+        MagicMock(
+            key="metadata/snap-00000000000000000000-1-00000000000000000000.avro",
+            size=1024,
+            last_modified="2023-01-01T00:00:00Z",
+            etag="etag4",
+        ),
     ]
 
 
@@ -189,7 +229,9 @@ def mock_aws_credentials():
     """Create mock AWS credentials for testing."""
     mock_creds = MagicMock()
     mock_creds.access_key_id.return_value = "AKIAIOSFODNN7EXAMPLE"
-    mock_creds.secret_access_key.return_value = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    mock_creds.secret_access_key.return_value = (
+        "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    )
     mock_creds.session_token.return_value = None
     mock_creds.expiry.return_value = None
     mock_creds.provider_name.return_value = "drainage"
@@ -199,18 +241,21 @@ def mock_aws_credentials():
 @pytest.fixture(autouse=True)
 def mock_aws_environment():
     """Mock AWS environment variables for testing."""
-    with patch.dict(os.environ, {
-        'AWS_ACCESS_KEY_ID': 'test-access-key',
-        'AWS_SECRET_ACCESS_KEY': 'test-secret-key',
-        'AWS_DEFAULT_REGION': 'us-west-2',
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test-access-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret-key",
+            "AWS_DEFAULT_REGION": "us-west-2",
+        },
+    ):
         yield
 
 
 @pytest.fixture
 def mock_tokio_runtime():
     """Mock the tokio runtime for testing."""
-    with patch('drainage.tokio.runtime.Runtime') as mock_runtime:
+    with patch("drainage.tokio.runtime.Runtime") as mock_runtime:
         mock_rt = MagicMock()
         mock_rt.block_on.return_value = MagicMock()
         mock_runtime.new.return_value = mock_rt
