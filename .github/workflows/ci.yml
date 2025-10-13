@@ -82,20 +82,36 @@ jobs:
     - name: Run Rust tests
       run: cargo test --verbose
 
+    - name: Create virtual environment
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install maturin pytest pytest-mock pytest-cov flake8 black
+
     - name: Build Python extension
-      run: maturin develop --release
+      run: |
+        source .venv/bin/activate
+        maturin develop --release
 
     - name: Run Python tests
-      run: python -m pytest tests/ -v --cov=drainage --cov-report=xml
+      run: |
+        source .venv/bin/activate
+        python -m pytest tests/ -v --cov=drainage --cov-report=xml
 
     - name: Check Python formatting
-      run: black --check tests/ examples/
+      run: |
+        source .venv/bin/activate
+        black --check tests/ examples/
 
     - name: Check Python linting
-      run: flake8 tests/ examples/ --max-line-length=100
+      run: |
+        source .venv/bin/activate
+        flake8 tests/ examples/ --max-line-length=100
 
     - name: Test examples
       run: |
+        source .venv/bin/activate
         python -c "import drainage; print('drainage module imported successfully')"
         python -c "import examples.simple_analysis; print('examples imported successfully')"
 
@@ -139,13 +155,17 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install Python dependencies
+    - name: Create virtual environment
       run: |
-        python -m pip install --upgrade pip
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
         pip install maturin
 
     - name: Build wheel
-      run: maturin build --release
+      run: |
+        source .venv/bin/activate
+        maturin build --release
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
