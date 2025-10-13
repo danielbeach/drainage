@@ -82,17 +82,18 @@ jobs:
     - name: Run Rust tests
       run: cargo test --verbose
 
-    - name: Setup Python environment and run tests
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        python -m pip install --upgrade pip
-        pip install maturin pytest pytest-mock pytest-cov
-        maturin develop --release
-        python -m pytest tests/ -v --cov=drainage --cov-report=xml
-        python -c "import drainage; print('drainage module imported successfully')"
-        python -c "import examples.simple_analysis; print('examples imported successfully')"
+    - name: Create virtual environment
+      run: python -m venv .venv
+
+    - name: Activate virtual environment (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: source .venv/bin/activate && python -m pip install --upgrade pip && pip install maturin pytest pytest-mock pytest-cov && maturin develop --release && python -m pytest tests/ -v --cov=drainage --cov-report=xml && python -c "import drainage; print('drainage module imported successfully')" && python -c "import examples.simple_analysis; print('examples imported successfully')"
       shell: bash
+
+    - name: Activate virtual environment (Windows)
+      if: runner.os == 'Windows'
+      run: .venv\Scripts\activate && python -m pip install --upgrade pip && pip install maturin pytest pytest-mock pytest-cov && maturin develop --release && python -m pytest tests/ -v --cov=drainage --cov-report=xml && python -c "import drainage; print('drainage module imported successfully')" && python -c "import examples.simple_analysis; print('examples imported successfully')"
+      shell: cmd
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
