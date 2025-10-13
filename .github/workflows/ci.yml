@@ -82,28 +82,29 @@ jobs:
     - name: Run Rust tests
       run: cargo test --verbose
 
-    - name: Create virtual environment
+    - name: Install Python dependencies
       run: |
-        python -m venv .venv
         python -m pip install --upgrade pip
         pip install maturin pytest pytest-mock pytest-cov
       shell: bash
 
     - name: Build Python extension
       run: |
-        source .venv/bin/activate
-        maturin develop --release
+        maturin build --release
+      shell: bash
+
+    - name: Install Python extension
+      run: |
+        pip install target/wheels/*.whl --force-reinstall
       shell: bash
 
     - name: Run Python tests
       run: |
-        source .venv/bin/activate
         python -m pytest tests/ -v --cov=drainage --cov-report=xml
       shell: bash
 
     - name: Test examples
       run: |
-        source .venv/bin/activate
         python -c "import drainage; print('drainage module imported successfully')"
         python -c "import examples.simple_analysis; print('examples imported successfully')"
       shell: bash
