@@ -1,11 +1,9 @@
 # Drainage 🌊
 
-╔═════════════════════════════════════════════╗
-║   🌊  D R A I N A G E  🦀                   ║
-║   Rust + Python Lake House Health Analyzer  ║
-║   Detect • Diagnose • Optimize • Flow       ║
-╚═════════════════════════════════════════════╝
-           ~~~~~     ~~~~~~
+🌊  D R A I N A G E  🦀    
+Rust + Python Lake House Health Analyzer 
+Detect • Diagnose • Optimize • Flow 
+~~~~~     ~~~~~~
 
 
 A high-performance Rust library with Python bindings for analyzing the health of remote S3-stored data lakes (Delta Lake and Apache Iceberg). 
