@@ -363,6 +363,29 @@ impl IcebergAnalyzer {
     }
 
     fn generate_recommendations(&self, metrics: &mut HealthMetrics) {
+        // Add warnings about incomplete analysis sections
+        let mut incomplete_sections = Vec::new();
+        
+        if metrics.schema_evolution.is_none() {
+            incomplete_sections.push("Schema Evolution");
+        }
+        if metrics.time_travel_metrics.is_none() {
+            incomplete_sections.push("Time Travel");
+        }
+        if metrics.table_constraints.is_none() {
+            incomplete_sections.push("Table Constraints");
+        }
+        if metrics.file_compaction.is_none() {
+            incomplete_sections.push("File Compaction");
+        }
+        
+        if !incomplete_sections.is_empty() {
+            metrics.recommendations.push(format!(
+                "⚠️  Analysis incomplete: {} sections could not be analyzed due to missing/inaccessible metadata files (common in actively updated tables). Basic metrics are still accurate.",
+                incomplete_sections.join(", ")
+            ));
+        }
+        
         // Check for unreferenced files
         if !metrics.unreferenced_files.is_empty() {
             metrics.recommendations.push(format!(
@@ -698,8 +721,16 @@ impl IcebergAnalyzer {
         });
 
         for metadata_file in &sorted_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
-            let metadata: Value = serde_json::from_slice(&content)?;
+            // Try to get the metadata file, but skip if it doesn't exist (race condition)
+            let content = match self.s3_client.get_object(&metadata_file.key).await {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            
+            let metadata: Value = match serde_json::from_slice(&content) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
 
             // Check for schema changes in metadata
             if let Some(schema) = metadata.get("schema") {
@@ -930,8 +961,16 @@ impl IcebergAnalyzer {
 
         // Analyze metadata files for time travel storage
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
-            let metadata: Value = serde_json::from_slice(&content)?;
+            // Try to get the metadata file, but skip if it doesn't exist (race condition)
+            let content = match self.s3_client.get_object(&metadata_file.key).await {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            
+            let metadata: Value = match serde_json::from_slice(&content) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
 
             if let Some(timestamp_ms) = metadata.get("timestamp_ms") {
                 let ts = timestamp_ms.as_u64().unwrap_or(0);
@@ -1089,8 +1128,16 @@ impl IcebergAnalyzer {
 
         // Analyze metadata files for constraint information
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
-            let metadata: Value = serde_json::from_slice(&content)?;
+            // Try to get the metadata file, but skip if it doesn't exist (race condition)
+            let content = match self.s3_client.get_object(&metadata_file.key).await {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            
+            let metadata: Value = match serde_json::from_slice(&content) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
 
             if let Some(schema) = metadata.get("schema") {
                 let constraints = self.extract_iceberg_constraints_from_schema(schema);
@@ -1350,8 +1397,16 @@ impl IcebergAnalyzer {
     ) -> Result<(bool, Vec<String>)> {
         // Look for sort order information that could benefit from Z-ordering
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
-            let metadata: Value = serde_json::from_slice(&content)?;
+            // Try to get the metadata file, but skip if it doesn't exist (race condition)
+            let content = match self.s3_client.get_object(&metadata_file.key).await {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            
+            let metadata: Value = match serde_json::from_slice(&content) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
 
             if let Some(sort_order) = metadata.get("sort-order") {
                 if let Some(sort_order_array) = sort_order.as_array() {
