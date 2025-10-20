@@ -44,6 +44,8 @@ Drainage helps you understand and optimize your data lake by identifying issues 
 pip install drainage
 ```
 
+> **Note**: This package is automatically built and published to PyPI using GitHub Actions when version tags are pushed.
+
 ### From Source
 
 ```bash
@@ -861,6 +863,20 @@ Typical analysis times:
 - [ ] Web dashboard for monitoring
 - [ ] CloudWatch/Datadog integration
 - [ ] Table comparison and diff
+
+## Releasing
+
+To release a new version:
+
+1. Update the version in `pyproject.toml` and `Cargo.toml`
+2. Commit and push changes
+3. Create and push a version tag:
+   ```bash
+   git tag -a v0.1.8 -m "Release v0.1.8"
+   git push origin main
+   git push origin v0.1.8
+   ```
+4. GitHub Actions will automatically build and publish to PyPI
 
 ## Contributing
 
