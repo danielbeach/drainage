@@ -147,7 +147,8 @@ if __name__ == "__main__":
         print("Usage: python analyze_iceberg_table.py <s3_path> [aws_region]")
         print("\nExample:")
         print(
-            "  python analyze_iceberg_table.py s3://my-bucket/my-iceberg-table us-west-2"
+            "  python analyze_iceberg_table.py s3://my-bucket/my-iceberg-table "
+            "us-west-2"
         )
         sys.exit(1)
 

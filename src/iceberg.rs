@@ -365,7 +365,7 @@ impl IcebergAnalyzer {
     fn generate_recommendations(&self, metrics: &mut HealthMetrics) {
         // Add warnings about incomplete analysis sections
         let mut incomplete_sections = Vec::new();
-        
+
         if metrics.schema_evolution.is_none() {
             incomplete_sections.push("Schema Evolution");
         }
@@ -378,14 +378,14 @@ impl IcebergAnalyzer {
         if metrics.file_compaction.is_none() {
             incomplete_sections.push("File Compaction");
         }
-        
+
         if !incomplete_sections.is_empty() {
             metrics.recommendations.push(format!(
                 "⚠️  Analysis incomplete: {} sections could not be analyzed due to missing/inaccessible metadata files (common in actively updated tables). Basic metrics are still accurate.",
                 incomplete_sections.join(", ")
             ));
         }
-        
+
         // Check for unreferenced files
         if !metrics.unreferenced_files.is_empty() {
             metrics.recommendations.push(format!(
@@ -726,7 +726,7 @@ impl IcebergAnalyzer {
                 Ok(c) => c,
                 Err(_) => continue,
             };
-            
+
             let metadata: Value = match serde_json::from_slice(&content) {
                 Ok(m) => m,
                 Err(_) => continue,
@@ -966,7 +966,7 @@ impl IcebergAnalyzer {
                 Ok(c) => c,
                 Err(_) => continue,
             };
-            
+
             let metadata: Value = match serde_json::from_slice(&content) {
                 Ok(m) => m,
                 Err(_) => continue,
@@ -1133,7 +1133,7 @@ impl IcebergAnalyzer {
                 Ok(c) => c,
                 Err(_) => continue,
             };
-            
+
             let metadata: Value = match serde_json::from_slice(&content) {
                 Ok(m) => m,
                 Err(_) => continue,
@@ -1402,7 +1402,7 @@ impl IcebergAnalyzer {
                 Ok(c) => c,
                 Err(_) => continue,
             };
-            
+
             let metadata: Value = match serde_json::from_slice(&content) {
                 Ok(m) => m,
                 Err(_) => continue,
