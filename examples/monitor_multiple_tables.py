@@ -81,7 +81,8 @@ def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2")
         print("Table Health Overview (sorted by health score):")
         print(f"{'─'*80}")
         print(
-            f"{'Path':<35} {'Type':<8} {'Health':<8} {'Files':<8} {'Size(GB)':<10} {'Issues'}"
+            f"{'Path':<35} {'Type':<8} {'Health':<8} {'Files':<8} "
+            f"{'Size(GB)':<10} {'Issues'}"
         )
         print(f"{'─'*80}")
 
@@ -95,8 +96,9 @@ def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2")
             )
             path_short = r["path"][-35:] if len(r["path"]) > 35 else r["path"]
             print(
-                f"{path_short:<35} {r['type']:<8} {health_emoji} {r['health_score']:.1%}  "
-                f"{r['total_files']:<8} {r['total_size_gb']:<10.2f} {len(r['recommendations'])}"
+                f"{path_short:<35} {r['type']:<8} {health_emoji} "
+                f"{r['health_score']:.1%}  {r['total_files']:<8} "
+                f"{r['total_size_gb']:<10.2f} {len(r['recommendations'])}"
             )
         print()
 
@@ -161,5 +163,7 @@ if __name__ == "__main__":
 
     # Optional: Save results to a file
     # import json
-    # with open(f"health_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w") as f:
+    # with open(
+    #     f"health_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w"
+    # ) as f:
     #     json.dump(results, f, indent=2)

@@ -167,10 +167,12 @@ if __name__ == "__main__":
         print("  python analyze_any_table.py s3://my-bucket/my-table us-west-2")
         print("  # Specify table type explicitly")
         print(
-            "  python analyze_any_table.py s3://my-bucket/my-delta-table delta us-west-2"
+            "  python analyze_any_table.py s3://my-bucket/my-delta-table delta "
+            "us-west-2"
         )
         print(
-            "  python analyze_any_table.py s3://my-bucket/my-iceberg-table iceberg us-west-2"
+            "  python analyze_any_table.py s3://my-bucket/my-iceberg-table "
+            "iceberg us-west-2"
         )
         sys.exit(1)
 
