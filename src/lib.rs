@@ -3,14 +3,14 @@ use pyo3::prelude::*;
 mod delta_lake;
 mod health_analyzer;
 mod iceberg;
-mod s3_client;
+mod storage_client;
 mod types;
 
 use health_analyzer::HealthAnalyzer;
 
 /// A Python module implemented in Rust for analyzing data lake health
 #[pymodule]
-fn drainage(_py: Python, m: &PyModule) -> PyResult<()> {
+fn drainage(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(analyze_delta_lake, m)?)?;
     m.add_function(wrap_pyfunction!(analyze_iceberg, m)?)?;
     m.add_function(wrap_pyfunction!(analyze_table, m)?)?;
@@ -21,18 +21,20 @@ fn drainage(_py: Python, m: &PyModule) -> PyResult<()> {
 /// Analyze Delta Lake table health
 #[pyfunction]
 fn analyze_delta_lake(
-    s3_path: String,
+    storage_path: String,
     aws_access_key_id: Option<String>,
     aws_secret_access_key: Option<String>,
     aws_region: Option<String>,
+    gcs_service_account_key: Option<String>,
 ) -> PyResult<types::HealthReport> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let analyzer = HealthAnalyzer::create_async(
-            s3_path,
+            storage_path,
             aws_access_key_id,
             aws_secret_access_key,
             aws_region,
+            gcs_service_account_key,
         )
         .await?;
         analyzer.analyze_delta_lake().await
@@ -42,18 +44,20 @@ fn analyze_delta_lake(
 /// Analyze Apache Iceberg table health
 #[pyfunction]
 fn analyze_iceberg(
-    s3_path: String,
+    storage_path: String,
     aws_access_key_id: Option<String>,
     aws_secret_access_key: Option<String>,
     aws_region: Option<String>,
+    gcs_service_account_key: Option<String>,
 ) -> PyResult<types::HealthReport> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         let analyzer = HealthAnalyzer::create_async(
-            s3_path,
+            storage_path,
             aws_access_key_id,
             aws_secret_access_key,
             aws_region,
+            gcs_service_account_key,
         )
         .await?;
         analyzer.analyze_iceberg().await
@@ -63,15 +67,16 @@ fn analyze_iceberg(
 /// Analyze table health with automatic table type detection
 #[pyfunction]
 fn analyze_table(
-    s3_path: String,
+    storage_path: String,
     table_type: Option<String>,
     aws_access_key_id: Option<String>,
     aws_secret_access_key: Option<String>,
     aws_region: Option<String>,
+    gcs_service_account_key: Option<String>,
 ) -> PyResult<types::HealthReport> {
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
-        let analyzer = HealthAnalyzer::create_async(s3_path.clone(), aws_access_key_id, aws_secret_access_key, aws_region).await?;
+        let analyzer = HealthAnalyzer::create_async(storage_path.clone(), aws_access_key_id, aws_secret_access_key, aws_region, gcs_service_account_key).await?;
         // If table type is specified, use it directly
         if let Some(ref ttype) = table_type {
             match ttype.to_lowercase().as_str() {

@@ -10,7 +10,7 @@
 Rust + Python Lake House Health Analyzer 
 Detect • Diagnose • Optimize • Flow 
 
-A high-performance Rust library with Python bindings for analyzing the health of remote S3-stored data lakes (Delta Lake and Apache Iceberg). 
+A high-performance Rust library with Python bindings for analyzing the health of cloud-stored data lakes (Delta Lake and Apache Iceberg). Currently supports Amazon S3 and Google Cloud Storage (GCS).
 Drainage helps you understand and optimize your data lake by identifying issues like unreferenced files, suboptimal partitioning, and inefficient file sizes.
 
 ## Features
@@ -32,7 +32,9 @@ Drainage helps you understand and optimize your data lake by identifying issues 
 - **🔍 Multi-Format Support**:
   - **Delta Lake tables** (including liquid clustering support)
   - **Apache Iceberg tables** (including clustering support)
-- **☁️ S3 Native**: Direct S3 integration for analyzing remote data lakes
+- **☁️ Multi-Cloud Support**: 
+  - **AWS S3**
+  - **Google Cloud Storage (GCS)** 
 - **🐍 Python Interface**: Easy-to-use Python API powered by PyO3
 - **🧪 Comprehensive Testing**: Full test suite with CI/CD across multiple platforms
 
@@ -64,10 +66,16 @@ maturin develop --release
 ```python
 import drainage
 
-# Analyze any table with automatic type detection
+# Analyze S3 table with automatic type detection
 report = drainage.analyze_table(
-    s3_path="s3://my-bucket/my-table",
+    storage_path="s3://my-bucket/my-table",
     aws_region="us-west-2"
+)
+
+# or analyze GCS table
+report = drainage.analyze_table(
+    storage_path="gs://my-bucket/my-table",
+    gcs_service_account_key="/path/to/service-account.json"
 )
 
 # Print a comprehensive health report
@@ -84,12 +92,24 @@ print(f"Total Files: {report.metrics.total_files}")
 ```python
 import drainage
 
-# Analyze a Delta Lake table
+# Analyze a Delta Lake table on S3
 report = drainage.analyze_delta_lake(
-    s3_path="s3://my-bucket/my-delta-table",
+    storage_path="s3://my-bucket/my-delta-table",
     aws_access_key_id="YOUR_ACCESS_KEY",  # Optional if using IAM roles
     aws_secret_access_key="YOUR_SECRET_KEY",  # Optional if using IAM roles
     aws_region="us-west-2"  # Optional, defaults to us-east-1
+)
+
+# Or analyze a Delta Lake table on GCS with service account
+report = drainage.analyze_delta_lake(
+    storage_path="gs://my-bucket/my-delta-table",
+    gcs_service_account_key="/path/to/service-account.json"
+)
+
+# Or use Application Default Credentials (ADC) for GCS
+report = drainage.analyze_delta_lake(
+    storage_path="gs://my-bucket/my-delta-table"
+    # No credentials needed - will use ADC from environment
 )
 
 # View the health score (0.0 to 1.0)
@@ -111,10 +131,16 @@ for recommendation in report.metrics.recommendations:
 ```python
 import drainage
 
-# Analyze an Apache Iceberg table
+# Analyze an Apache Iceberg table on S3
 report = drainage.analyze_iceberg(
-    s3_path="s3://my-bucket/my-iceberg-table",
+    storage_path="s3://my-bucket/my-iceberg-table",
     aws_region="us-west-2"
+)
+
+# Or analyze an Iceberg table on GCS
+report = drainage.analyze_iceberg(
+    storage_path="gs://my-bucket/my-iceberg-table",
+    gcs_service_account_key="/path/to/service-account.json"
 )
 
 # View file size distribution
@@ -147,12 +173,52 @@ for table in tables.collect():
             print(f"✅ Unity Catalog Delta table: {s3_path}")
             # Try analysis
             try:
-                report = drainage.analyze_table(s3_path=s3_path, aws_region="us-east-1")
+                report = drainage.analyze_table(storage_path=s3_path, aws_region="us-east-1")
                 drainage.print_health_report(report)
             except Exception as e:
                 print(f"❌ Analysis failed: {e}")
 ```
 
+## Cloud Provider Authentication
+
+### AWS S3
+
+**Using explicit credentials:**
+```python
+report = drainage.analyze_table(
+    storage_path="s3://my-bucket/my-table",
+    aws_access_key_id="YOUR_ACCESS_KEY",
+    aws_secret_access_key="YOUR_SECRET_KEY",
+    aws_region="us-west-2"
+)
+```
+
+**Using IAM roles (recommended for EC2, Lambda, ECS, etc.):**
+```python
+report = drainage.analyze_table(
+    storage_path="s3://my-bucket/my-table",
+    aws_region="us-west-2"
+    # No credentials needed - will use IAM role attached to the instance
+)
+```
+
+### Google Cloud Storage (GCS)
+
+**Using service account key file:**
+```python
+report = drainage.analyze_table(
+    storage_path="gs://my-bucket/my-table",
+    gcs_service_account_key="/path/to/service-account.json"
+)
+```
+
+**Using Application Default Credentials (ADC):**
+```python
+report = drainage.analyze_table(
+    storage_path="gs://my-bucket/my-table"
+    # No credentials needed - will use ADC from environment
+)
+```
 
 ## Health Metrics Explained
 

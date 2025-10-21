@@ -1,4 +1,4 @@
-use crate::s3_client::S3ClientWrapper;
+use crate::storage_client::StorageClient;
 use crate::types::*;
 use anyhow::Result;
 use serde_json::Value;
@@ -14,28 +14,28 @@ struct SchemaChange {
 }
 
 pub struct IcebergAnalyzer {
-    s3_client: S3ClientWrapper,
+    storage_client: StorageClient,
 }
 
 impl IcebergAnalyzer {
-    pub fn new(s3_client: S3ClientWrapper) -> Self {
-        Self { s3_client }
+    pub fn new(storage_client: StorageClient) -> Self {
+        Self { storage_client }
     }
 
     pub async fn analyze(&self) -> Result<HealthReport> {
         let mut report = HealthReport::new(
             format!(
-                "s3://{}/{}",
-                self.s3_client.get_bucket(),
-                self.s3_client.get_prefix()
+                "{}/{}",
+                self.storage_client.get_bucket(),
+                self.storage_client.get_prefix()
             ),
             "iceberg".to_string(),
         );
 
         // List all files in the Iceberg table directory
         let all_objects = self
-            .s3_client
-            .list_objects(self.s3_client.get_prefix())
+            .storage_client
+            .list_objects(self.storage_client.get_prefix())
             .await?;
 
         // Find the current metadata.json file
@@ -59,7 +59,7 @@ impl IcebergAnalyzer {
         // Find unreferenced files
         let referenced_set: HashSet<String> = referenced_files.into_iter().collect();
         for file in &data_files {
-            let file_path = format!("{}/{}", self.s3_client.get_prefix(), file.key);
+            let file_path = format!("{}/{}", self.storage_client.get_prefix(), file.key);
             if !referenced_set.contains(&file_path) {
                 metrics.unreferenced_files.push(FileInfo {
                     path: file_path,
@@ -90,7 +90,7 @@ impl IcebergAnalyzer {
 
         // Calculate additional health metrics
         metrics.calculate_data_skew();
-        let metadata_files_owned: Vec<crate::s3_client::ObjectInfo> =
+        let metadata_files_owned: Vec<crate::storage_client::ObjectInfo> =
             metadata_files.iter().map(|f| (*f).clone()).collect();
         metrics.calculate_metadata_health(&metadata_files_owned);
         metrics.calculate_snapshot_health(metadata_files.len()); // Simplified: use metadata file count as snapshot count
@@ -127,10 +127,10 @@ impl IcebergAnalyzer {
 
     fn find_current_metadata<'a>(
         &self,
-        objects: &'a [crate::s3_client::ObjectInfo],
-    ) -> Result<&'a crate::s3_client::ObjectInfo> {
+        objects: &'a [crate::storage_client::ObjectInfo],
+    ) -> Result<&'a crate::storage_client::ObjectInfo> {
         // Find the most recent metadata.json file
-        let metadata_files: Vec<&crate::s3_client::ObjectInfo> = objects
+        let metadata_files: Vec<&crate::storage_client::ObjectInfo> = objects
             .iter()
             .filter(|obj| obj.key.ends_with("metadata.json"))
             .collect();
@@ -151,8 +151,11 @@ impl IcebergAnalyzer {
         Ok(sorted_files[0])
     }
 
-    async fn load_metadata(&self, metadata_file: &crate::s3_client::ObjectInfo) -> Result<Value> {
-        let content = self.s3_client.get_object(&metadata_file.key).await?;
+    async fn load_metadata(
+        &self,
+        metadata_file: &crate::storage_client::ObjectInfo,
+    ) -> Result<Value> {
+        let content = self.storage_client.get_object(&metadata_file.key).await?;
         let metadata: Value = serde_json::from_slice(&content)?;
         Ok(metadata)
     }
@@ -162,7 +165,7 @@ impl IcebergAnalyzer {
 
         if let Some(manifest_list_path) = metadata.get("manifest-list") {
             if let Some(path) = manifest_list_path.as_str() {
-                let content = self.s3_client.get_object(path).await?;
+                let content = self.storage_client.get_object(path).await?;
                 let manifest_list_json: Value = serde_json::from_slice(&content)?;
 
                 if let Some(manifests) = manifest_list_json.get("manifests") {
@@ -186,7 +189,7 @@ impl IcebergAnalyzer {
         let mut referenced_files = Vec::new();
 
         for manifest_path in manifest_list {
-            let content = self.s3_client.get_object(manifest_path).await?;
+            let content = self.storage_client.get_object(manifest_path).await?;
             let manifest: Value = serde_json::from_slice(&content)?;
 
             if let Some(entries) = manifest.get("entries") {
@@ -209,10 +212,10 @@ impl IcebergAnalyzer {
 
     fn categorize_files<'a>(
         &self,
-        objects: &'a [crate::s3_client::ObjectInfo],
+        objects: &'a [crate::storage_client::ObjectInfo],
     ) -> Result<(
-        Vec<&'a crate::s3_client::ObjectInfo>,
-        Vec<&'a crate::s3_client::ObjectInfo>,
+        Vec<&'a crate::storage_client::ObjectInfo>,
+        Vec<&'a crate::storage_client::ObjectInfo>,
     )> {
         let mut data_files = Vec::new();
         let mut metadata_files = Vec::new();
@@ -230,7 +233,7 @@ impl IcebergAnalyzer {
 
     fn analyze_partitioning_and_clustering(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
         metadata: &Value,
         metrics: &mut HealthMetrics,
     ) -> Result<()> {
@@ -281,7 +284,7 @@ impl IcebergAnalyzer {
             partition_info.file_count += 1;
             partition_info.total_size_bytes += file.size as u64;
             partition_info.files.push(FileInfo {
-                path: format!("{}/{}", self.s3_client.get_prefix(), file.key),
+                path: format!("{}/{}", self.storage_client.get_prefix(), file.key),
                 size_bytes: file.size as u64,
                 last_modified: file.last_modified.clone(),
                 is_referenced: true, // We'll update this later
@@ -344,7 +347,7 @@ impl IcebergAnalyzer {
 
     fn calculate_file_size_distribution(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
         metrics: &mut HealthMetrics,
     ) {
         for file in data_files {
@@ -616,7 +619,7 @@ impl IcebergAnalyzer {
         // Analyze manifest files for deletion vectors
         for manifest_path in manifest_list {
             // Download and analyze manifest file
-            let manifest_content = self.s3_client.get_object(manifest_path).await?;
+            let manifest_content = self.storage_client.get_object(manifest_path).await?;
             let manifest_json: Value = serde_json::from_slice(&manifest_content)?;
 
             // Look for deletion files in manifest
@@ -704,7 +707,7 @@ impl IcebergAnalyzer {
 
     async fn analyze_schema_evolution(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::SchemaEvolutionMetrics>> {
         let mut schema_changes = Vec::new();
         let mut current_version = 0;
@@ -722,7 +725,7 @@ impl IcebergAnalyzer {
 
         for metadata_file in &sorted_files {
             // Try to get the metadata file, but skip if it doesn't exist (race condition)
-            let content = match self.s3_client.get_object(&metadata_file.key).await {
+            let content = match self.storage_client.get_object(&metadata_file.key).await {
                 Ok(c) => c,
                 Err(_) => continue,
             };
@@ -952,7 +955,7 @@ impl IcebergAnalyzer {
 
     async fn analyze_time_travel(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::TimeTravelMetrics>> {
         let mut total_snapshots = 0;
         let mut total_historical_size = 0u64;
@@ -962,7 +965,7 @@ impl IcebergAnalyzer {
         // Analyze metadata files for time travel storage
         for metadata_file in metadata_files {
             // Try to get the metadata file, but skip if it doesn't exist (race condition)
-            let content = match self.s3_client.get_object(&metadata_file.key).await {
+            let content = match self.storage_client.get_object(&metadata_file.key).await {
                 Ok(c) => c,
                 Err(_) => continue,
             };
@@ -1118,7 +1121,7 @@ impl IcebergAnalyzer {
 
     async fn analyze_table_constraints(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::TableConstraintsMetrics>> {
         let mut total_constraints = 0;
         let mut check_constraints = 0;
@@ -1129,7 +1132,7 @@ impl IcebergAnalyzer {
         // Analyze metadata files for constraint information
         for metadata_file in metadata_files {
             // Try to get the metadata file, but skip if it doesn't exist (race condition)
-            let content = match self.s3_client.get_object(&metadata_file.key).await {
+            let content = match self.storage_client.get_object(&metadata_file.key).await {
                 Ok(c) => c,
                 Err(_) => continue,
             };
@@ -1278,8 +1281,8 @@ impl IcebergAnalyzer {
 
     async fn analyze_file_compaction(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::FileCompactionMetrics>> {
         let mut small_files_count = 0;
         let mut small_files_size = 0u64;
@@ -1360,7 +1363,7 @@ impl IcebergAnalyzer {
 
     fn calculate_recommended_target_size(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
     ) -> u64 {
         if data_files.is_empty() {
             return 128 * 1024 * 1024; // 128MB default
@@ -1393,12 +1396,12 @@ impl IcebergAnalyzer {
 
     async fn analyze_iceberg_z_order_opportunity(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<(bool, Vec<String>)> {
         // Look for sort order information that could benefit from Z-ordering
         for metadata_file in metadata_files {
             // Try to get the metadata file, but skip if it doesn't exist (race condition)
-            let content = match self.s3_client.get_object(&metadata_file.key).await {
+            let content = match self.storage_client.get_object(&metadata_file.key).await {
                 Ok(c) => c,
                 Err(_) => continue,
             };

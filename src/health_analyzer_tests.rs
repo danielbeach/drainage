@@ -1,17 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::health_analyzer::*;
-    use crate::s3_client::*;
-    use crate::types::*;
+    use crate::storage_client::*;
 
     #[test]
     fn test_health_analyzer_get_table_info() {
-        // This test would require a mock S3ClientWrapper
+        // This test would require a mock StorageClient
         // For now, we'll test the concept
         let bucket = "test-bucket".to_string();
         let prefix = "test-prefix".to_string();
-        
+
         // In a real test, we'd create a mock HealthAnalyzer
         // and verify that get_table_info returns the correct values
         assert_eq!(bucket, "test-bucket");
@@ -19,26 +16,35 @@ mod tests {
     }
 
     #[test]
-    fn test_health_analyzer_creation_parameters() {
-        let s3_path = "s3://test-bucket/test-table/";
+    fn test_health_analyzer_creation_parameters_s3() {
+        let storage_path = "s3://test-bucket/test-table/";
         let aws_access_key_id = Some("AKIAIOSFODNN7EXAMPLE".to_string());
         let aws_secret_access_key = Some("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".to_string());
         let aws_region = Some("us-west-2".to_string());
-        
+
         // Test parameter validation
         assert!(aws_access_key_id.is_some());
         assert!(aws_secret_access_key.is_some());
         assert!(aws_region.is_some());
-        assert!(s3_path.starts_with("s3://"));
+        assert!(storage_path.starts_with("s3://"));
+    }
+
+    #[test]
+    fn test_health_analyzer_creation_parameters_gcs() {
+        let storage_path = "gs://test-bucket/test-table/";
+        let gcs_service_account_key = Some("/path/to/service-account.json".to_string());
+
+        assert!(gcs_service_account_key.is_some());
+        assert!(storage_path.starts_with("gs://"));
     }
 
     #[test]
     fn test_health_analyzer_creation_without_credentials() {
         let s3_path = "s3://test-bucket/test-table/";
-        let aws_access_key_id = None;
-        let aws_secret_access_key = None;
+        let aws_access_key_id: Option<String> = None;
+        let aws_secret_access_key: Option<String> = None;
         let aws_region = Some("us-west-2".to_string());
-        
+
         // Test parameter validation for IAM role usage
         assert!(aws_access_key_id.is_none());
         assert!(aws_secret_access_key.is_none());
@@ -51,8 +57,8 @@ mod tests {
         let s3_path = "s3://test-bucket/test-table/";
         let aws_access_key_id = Some("AKIAIOSFODNN7EXAMPLE".to_string());
         let aws_secret_access_key = Some("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".to_string());
-        let aws_region = None;
-        
+        let aws_region: Option<String> = None;
+
         // Test parameter validation for default region
         assert!(aws_access_key_id.is_some());
         assert!(aws_secret_access_key.is_some());
@@ -61,22 +67,50 @@ mod tests {
     }
 
     #[test]
-    fn test_health_analyzer_s3_path_validation() {
+    fn test_health_analyzer_gcs_creation_without_credentials() {
+        let gcs_path = "gs://test-bucket/test-table/";
+        let gcs_service_account_key: Option<String> = None;
+
+        // Test parameter validation for ADC (Application Default Credentials) usage
+        assert!(gcs_service_account_key.is_none());
+        assert!(gcs_path.starts_with("gs://"));
+    }
+
+    #[test]
+    fn test_health_analyzer_gcs_creation_with_service_account() {
+        let gcs_path = "gs://test-bucket/test-table/";
+        let gcs_service_account_key = Some("/path/to/service-account.json".to_string());
+
+        // Test parameter validation for service account key usage
+        assert!(gcs_service_account_key.is_some());
+        assert!(gcs_path.starts_with("gs://"));
+    }
+
+    #[test]
+    fn test_health_analyzer_storage_path_validation() {
         let valid_paths = vec![
             "s3://bucket/table/",
             "s3://my-bucket/my-table/",
             "s3://bucket.with.dots/table/",
             "s3://bucket/path/to/table/",
+            "gs://bucket/table/",
+            "gs://my-bucket/my-table/",
+            "gs://bucket/path/to/table/",
         ];
-        
+
         for path in valid_paths {
-            assert!(path.starts_with("s3://"), "Invalid S3 path: {}", path);
-            assert!(path.contains("/"), "S3 path should contain path separator: {}", path);
+            let is_valid = path.starts_with("s3://") || path.starts_with("gs://");
+            assert!(is_valid, "Invalid storage path: {}", path);
+            assert!(
+                path.contains("/"),
+                "Storage path should contain path separator: {}",
+                path
+            );
         }
     }
 
     #[test]
-    fn test_health_analyzer_s3_path_validation_invalid() {
+    fn test_health_analyzer_storage_path_validation_invalid() {
         let invalid_paths = vec![
             "https://bucket/table/",
             "ftp://bucket/table/",
@@ -84,14 +118,20 @@ mod tests {
             "",
             "s3://",
             "s3:///",
+            "gs://",
+            "gs:///",
         ];
-        
+
         for path in invalid_paths {
             if path.is_empty() {
                 continue; // Skip empty string test
             }
-            assert!(!path.starts_with("s3://") || path == "s3://" || path == "s3:///", 
-                   "Should be invalid S3 path: {}", path);
+            let is_invalid = !path.starts_with("s3://") && !path.starts_with("gs://")
+                || path == "s3://"
+                || path == "s3:///"
+                || path == "gs://"
+                || path == "gs:///";
+            assert!(is_invalid, "Should be invalid storage path: {}", path);
         }
     }
 
@@ -104,10 +144,14 @@ mod tests {
             "ap-southeast-1",
             "ca-central-1",
         ];
-        
+
         for region in valid_regions {
             assert!(!region.is_empty(), "Region should not be empty");
-            assert!(region.contains("-"), "Region should contain dash: {}", region);
+            assert!(
+                region.contains("-"),
+                "Region should contain dash: {}",
+                region
+            );
         }
     }
 
@@ -115,11 +159,23 @@ mod tests {
     fn test_health_analyzer_aws_credentials_validation() {
         let valid_access_key = "AKIAIOSFODNN7EXAMPLE";
         let valid_secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
-        
-        assert!(valid_access_key.starts_with("AKIA"), "Access key should start with AKIA");
-        assert!(valid_secret_key.len() >= 20, "Secret key should be at least 20 characters");
-        assert!(!valid_access_key.contains(" "), "Access key should not contain spaces");
-        assert!(!valid_secret_key.contains(" "), "Secret key should not contain spaces");
+
+        assert!(
+            valid_access_key.starts_with("AKIA"),
+            "Access key should start with AKIA"
+        );
+        assert!(
+            valid_secret_key.len() >= 20,
+            "Secret key should be at least 20 characters"
+        );
+        assert!(
+            !valid_access_key.contains(" "),
+            "Access key should not contain spaces"
+        );
+        assert!(
+            !valid_secret_key.contains(" "),
+            "Secret key should not contain spaces"
+        );
     }
 
     #[test]
@@ -144,11 +200,13 @@ mod tests {
                 etag: None,
             },
         ];
-        
+
         // Check for Delta Lake characteristic files
-        let has_delta_log = objects.iter().any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
+        let has_delta_log = objects
+            .iter()
+            .any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
         let has_iceberg_metadata = objects.iter().any(|obj| obj.key.ends_with("metadata.json"));
-        
+
         assert!(has_delta_log, "Should detect Delta Lake files");
         assert!(!has_iceberg_metadata, "Should not detect Iceberg files");
     }
@@ -175,11 +233,13 @@ mod tests {
                 etag: None,
             },
         ];
-        
+
         // Check for Iceberg characteristic files
-        let has_delta_log = objects.iter().any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
+        let has_delta_log = objects
+            .iter()
+            .any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
         let has_iceberg_metadata = objects.iter().any(|obj| obj.key.ends_with("metadata.json"));
-        
+
         assert!(!has_delta_log, "Should not detect Delta Lake files");
         assert!(has_iceberg_metadata, "Should detect Iceberg files");
     }
@@ -206,11 +266,13 @@ mod tests {
                 etag: None,
             },
         ];
-        
+
         // Check for both Delta Lake and Iceberg files
-        let has_delta_log = objects.iter().any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
+        let has_delta_log = objects
+            .iter()
+            .any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
         let has_iceberg_metadata = objects.iter().any(|obj| obj.key.ends_with("metadata.json"));
-        
+
         assert!(has_delta_log, "Should detect Delta Lake files");
         assert!(has_iceberg_metadata, "Should detect Iceberg files");
         // This should be ambiguous
@@ -232,28 +294,30 @@ mod tests {
                 etag: None,
             },
         ];
-        
+
         // Check for neither Delta Lake nor Iceberg files
-        let has_delta_log = objects.iter().any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
+        let has_delta_log = objects
+            .iter()
+            .any(|obj| obj.key.contains("_delta_log/") && obj.key.ends_with(".json"));
         let has_iceberg_metadata = objects.iter().any(|obj| obj.key.ends_with("metadata.json"));
-        
+
         assert!(!has_delta_log, "Should not detect Delta Lake files");
         assert!(!has_iceberg_metadata, "Should not detect Iceberg files");
         // This should be unknown
     }
 
     #[test]
-    fn test_health_analyzer_s3_client_wrapper_clone() {
-        // Test that S3ClientWrapper can be cloned
+    fn test_health_analyzer_storage_client_clone() {
+        // Test that StorageClient can be cloned
         // This is important for the HealthAnalyzer implementation
         let bucket = "test-bucket".to_string();
         let prefix = "test-prefix".to_string();
-        
-        // In a real test, we'd create an actual S3ClientWrapper and test cloning
+
+        // In a real test, we'd create an actual StorageClient and test cloning
         // For now, we'll test the concept
         let bucket_clone = bucket.clone();
         let prefix_clone = prefix.clone();
-        
+
         assert_eq!(bucket, bucket_clone);
         assert_eq!(prefix, prefix_clone);
     }
@@ -262,7 +326,7 @@ mod tests {
     fn test_health_analyzer_error_handling() {
         let invalid_s3_path = "not-a-valid-s3-path";
         let valid_s3_path = "s3://bucket/table/";
-        
+
         // Test that invalid paths are handled appropriately
         assert!(!invalid_s3_path.starts_with("s3://"));
         assert!(valid_s3_path.starts_with("s3://"));
@@ -271,16 +335,18 @@ mod tests {
     #[test]
     fn test_health_analyzer_async_creation() {
         // Test that the async creation method signature is correct
-        let s3_path = "s3://test-bucket/test-table/".to_string();
+        let storage_path = "s3://test-bucket/test-table/".to_string();
         let aws_access_key_id = Some("AKIAIOSFODNN7EXAMPLE".to_string());
         let aws_secret_access_key = Some("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".to_string());
         let aws_region = Some("us-west-2".to_string());
-        
+        let gcs_service_account_key: Option<String> = None;
+
         // Verify parameter types match expected signature
-        assert!(s3_path.is_string());
+        assert!(!storage_path.is_empty());
         assert!(aws_access_key_id.is_some());
         assert!(aws_secret_access_key.is_some());
         assert!(aws_region.is_some());
+        assert!(gcs_service_account_key.is_none());
     }
 
     #[test]
@@ -312,7 +378,7 @@ mod tests {
         // Test that HealthAnalyzer has the correct PyClass attributes
         let struct_name = "HealthAnalyzer";
         assert_eq!(struct_name, "HealthAnalyzer");
-        
+
         // In a real test, we'd verify the #[pyclass] attribute
         // and that it implements the correct methods
     }
@@ -322,7 +388,7 @@ mod tests {
         // Test that HealthAnalyzer has the correct PyMethods attributes
         let impl_name = "HealthAnalyzer";
         assert_eq!(impl_name, "HealthAnalyzer");
-        
+
         // In a real test, we'd verify the #[pymethods] attribute
         // and that it implements the correct methods
     }
@@ -336,44 +402,51 @@ mod tests {
             "analyze_iceberg",
             "list_objects_for_detection",
         ];
-        
+
         for method in internal_methods {
-            assert!(!method.is_empty(), "Method name should not be empty: {}", method);
+            assert!(
+                !method.is_empty(),
+                "Method name should not be empty: {}",
+                method
+            );
         }
     }
 
     #[test]
     fn test_health_analyzer_public_methods() {
         // Test that public methods are properly implemented
-        let public_methods = vec![
-            "get_table_info",
-        ];
-        
+        let public_methods = vec!["get_table_info"];
+
         for method in public_methods {
-            assert!(!method.is_empty(), "Method name should not be empty: {}", method);
+            assert!(
+                !method.is_empty(),
+                "Method name should not be empty: {}",
+                method
+            );
         }
     }
 
     #[test]
     fn test_health_analyzer_error_types() {
         // Test that appropriate error types are used
-        let error_types = vec![
-            "PyRuntimeError",
-            "PyValueError",
-        ];
-        
+        let error_types = vec!["PyRuntimeError", "PyValueError"];
+
         for error_type in error_types {
-            assert!(!error_type.is_empty(), "Error type should not be empty: {}", error_type);
+            assert!(
+                !error_type.is_empty(),
+                "Error type should not be empty: {}",
+                error_type
+            );
         }
     }
 
     #[test]
-    fn test_health_analyzer_s3_client_wrapper_dependency() {
-        // Test that HealthAnalyzer properly depends on S3ClientWrapper
-        let dependency = "S3ClientWrapper";
-        assert_eq!(dependency, "S3ClientWrapper");
-        
-        // In a real test, we'd verify that HealthAnalyzer uses S3ClientWrapper
+    fn test_health_analyzer_storage_client_dependency() {
+        // Test that HealthAnalyzer properly depends on StorageClient
+        let dependency = "StorageClient";
+        assert_eq!(dependency, "StorageClient");
+
+        // In a real test, we'd verify that HealthAnalyzer uses StorageClient
         // and that the dependency is properly injected
     }
 
@@ -382,7 +455,7 @@ mod tests {
         // Test that HealthAnalyzer properly depends on HealthReport
         let dependency = "HealthReport";
         assert_eq!(dependency, "HealthReport");
-        
+
         // In a real test, we'd verify that HealthAnalyzer returns HealthReport
         // and that the dependency is properly used
     }
@@ -392,7 +465,7 @@ mod tests {
         // Test that HealthAnalyzer properly uses async runtime
         let runtime = "tokio";
         assert_eq!(runtime, "tokio");
-        
+
         // In a real test, we'd verify that HealthAnalyzer uses tokio runtime
         // and that async methods are properly implemented
     }
@@ -402,7 +475,7 @@ mod tests {
         // Test that HealthAnalyzer properly uses PyResult for error handling
         let result_type = "PyResult";
         assert_eq!(result_type, "PyResult");
-        
+
         // In a real test, we'd verify that HealthAnalyzer methods return PyResult
         // and that errors are properly converted to Python exceptions
     }
@@ -412,7 +485,7 @@ mod tests {
         // Test that HealthAnalyzer properly uses anyhow for error handling
         let error_crate = "anyhow";
         assert_eq!(error_crate, "anyhow");
-        
+
         // In a real test, we'd verify that HealthAnalyzer uses anyhow::Result
         // and that errors are properly converted to PyResult
     }

@@ -359,3 +359,7 @@ local/
 *.rej
 *.swp
 *.tmp
+
+# Agent rules
+.cursor/*
+.claude/*

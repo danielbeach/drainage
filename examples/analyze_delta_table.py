@@ -30,7 +30,7 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
         # Run the analysis
         report = drainage.analyze_delta_lake(
             s3_path=s3_path,
-            aws_region=aws_region
+            aws_region=aws_region,
             # aws_access_key_id=None,  # Optional - uses default credentials
             # aws_secret_access_key=None,  # Optional - uses default credentials
         )
@@ -44,9 +44,7 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
         health_emoji = (
             "🟢"
             if report.health_score > 0.8
-            else "🟡"
-            if report.health_score > 0.6
-            else "🔴"
+            else "🟡" if report.health_score > 0.6 else "🔴"
         )
         print(f"{health_emoji} Overall Health Score: {report.health_score:.1%}")
         print(f"📅 Analysis Timestamp: {report.analysis_timestamp}\n")
