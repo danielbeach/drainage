@@ -90,9 +90,7 @@ def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2")
             health_emoji = (
                 "🟢"
                 if r["health_score"] > 0.8
-                else "🟡"
-                if r["health_score"] > 0.6
-                else "🔴"
+                else "🟡" if r["health_score"] > 0.6 else "🔴"
             )
             path_short = r["path"][-35:] if len(r["path"]) > 35 else r["path"]
             print(

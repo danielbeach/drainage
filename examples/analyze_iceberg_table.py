@@ -39,9 +39,7 @@ def analyze_iceberg_table(s3_path: str, aws_region: str = "us-west-2"):
         health_emoji = (
             "🟢"
             if report.health_score > 0.8
-            else "🟡"
-            if report.health_score > 0.6
-            else "🔴"
+            else "🟡" if report.health_score > 0.6 else "🔴"
         )
         print(f"{health_emoji} Overall Health Score: {report.health_score:.1%}")
         print(f"📅 Analysis Timestamp: {report.analysis_timestamp}\n")

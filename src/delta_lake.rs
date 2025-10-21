@@ -1,4 +1,4 @@
-use crate::s3_client::S3ClientWrapper;
+use crate::storage_client::StorageClient;
 use crate::types::*;
 use anyhow::Result;
 use serde_json::Value;
@@ -14,28 +14,28 @@ struct SchemaChange {
 }
 
 pub struct DeltaLakeAnalyzer {
-    s3_client: S3ClientWrapper,
+    storage_client: StorageClient,
 }
 
 impl DeltaLakeAnalyzer {
-    pub fn new(s3_client: S3ClientWrapper) -> Self {
-        Self { s3_client }
+    pub fn new(storage_client: StorageClient) -> Self {
+        Self { storage_client }
     }
 
     pub async fn analyze(&self) -> Result<HealthReport> {
         let mut report = HealthReport::new(
             format!(
-                "s3://{}/{}",
-                self.s3_client.get_bucket(),
-                self.s3_client.get_prefix()
+                "{}/{}",
+                self.storage_client.get_bucket(),
+                self.storage_client.get_prefix()
             ),
             "delta".to_string(),
         );
 
         // List all files in the Delta table directory
         let all_objects = self
-            .s3_client
-            .list_objects(self.s3_client.get_prefix())
+            .storage_client
+            .list_objects(self.storage_client.get_prefix())
             .await?;
 
         // Separate data files from metadata files
@@ -55,7 +55,7 @@ impl DeltaLakeAnalyzer {
         // Find unreferenced files
         let referenced_set: HashSet<String> = referenced_files.into_iter().collect();
         for file in &data_files {
-            let file_path = format!("{}/{}", self.s3_client.get_prefix(), file.key);
+            let file_path = format!("{}/{}", self.storage_client.get_prefix(), file.key);
             if !referenced_set.contains(&file_path) {
                 metrics.unreferenced_files.push(FileInfo {
                     path: file_path,
@@ -91,7 +91,7 @@ impl DeltaLakeAnalyzer {
 
         // Calculate additional health metrics
         metrics.calculate_data_skew();
-        let metadata_files_owned: Vec<crate::s3_client::ObjectInfo> =
+        let metadata_files_owned: Vec<crate::storage_client::ObjectInfo> =
             metadata_files.iter().map(|f| (*f).clone()).collect();
         metrics.calculate_metadata_health(&metadata_files_owned);
         metrics.calculate_snapshot_health(metadata_files.len()); // Simplified: use metadata file count as snapshot count
@@ -126,10 +126,10 @@ impl DeltaLakeAnalyzer {
 
     fn categorize_files<'a>(
         &self,
-        objects: &'a [crate::s3_client::ObjectInfo],
+        objects: &'a [crate::storage_client::ObjectInfo],
     ) -> Result<(
-        Vec<&'a crate::s3_client::ObjectInfo>,
-        Vec<&'a crate::s3_client::ObjectInfo>,
+        Vec<&'a crate::storage_client::ObjectInfo>,
+        Vec<&'a crate::storage_client::ObjectInfo>,
     )> {
         let mut data_files = Vec::new();
         let mut metadata_files = Vec::new();
@@ -147,12 +147,12 @@ impl DeltaLakeAnalyzer {
 
     async fn find_referenced_files(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Vec<String>> {
         let mut referenced_files = Vec::new();
 
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
 
             // Handle both single JSON objects and newline-delimited JSON (NDJSON)
             let content_str = String::from_utf8_lossy(&content);
@@ -204,10 +204,10 @@ impl DeltaLakeAnalyzer {
 
     async fn find_clustering_info(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<Vec<String>>> {
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
 
             // Handle both single JSON objects and newline-delimited JSON (NDJSON)
             let content_str = String::from_utf8_lossy(&content);
@@ -308,7 +308,7 @@ impl DeltaLakeAnalyzer {
 
     fn analyze_partitioning(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
         metrics: &mut HealthMetrics,
     ) -> Result<()> {
         let mut partition_map: HashMap<String, PartitionInfo> = HashMap::new();
@@ -347,7 +347,7 @@ impl DeltaLakeAnalyzer {
             partition_info.file_count += 1;
             partition_info.total_size_bytes += file.size as u64;
             partition_info.files.push(FileInfo {
-                path: format!("{}/{}", self.s3_client.get_prefix(), file.key),
+                path: format!("{}/{}", self.storage_client.get_prefix(), file.key),
                 size_bytes: file.size as u64,
                 last_modified: file.last_modified.clone(),
                 is_referenced: true, // We'll update this later
@@ -370,7 +370,7 @@ impl DeltaLakeAnalyzer {
 
     fn analyze_clustering(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
         clustering_columns: &[String],
         metrics: &mut HealthMetrics,
     ) -> Result<()> {
@@ -410,7 +410,7 @@ impl DeltaLakeAnalyzer {
 
     fn calculate_file_size_distribution(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
         metrics: &mut HealthMetrics,
     ) {
         for file in data_files {
@@ -662,7 +662,7 @@ impl DeltaLakeAnalyzer {
 
     async fn analyze_schema_evolution(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::SchemaEvolutionMetrics>> {
         let mut schema_changes = Vec::new();
         let mut current_version = 0;
@@ -679,7 +679,7 @@ impl DeltaLakeAnalyzer {
         });
 
         for metadata_file in &sorted_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
             let content_str = String::from_utf8_lossy(&content);
 
             for line in content_str.lines() {
@@ -948,7 +948,7 @@ impl DeltaLakeAnalyzer {
 
     async fn analyze_deletion_vectors(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::DeletionVectorMetrics>> {
         let mut deletion_vector_count = 0;
         let mut total_size = 0;
@@ -956,7 +956,7 @@ impl DeltaLakeAnalyzer {
         let mut oldest_dv_age: f64 = 0.0;
 
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
             let content_str = String::from_utf8_lossy(&content);
 
             for line in content_str.lines() {
@@ -1094,7 +1094,7 @@ impl DeltaLakeAnalyzer {
 
     async fn analyze_time_travel(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::TimeTravelMetrics>> {
         let mut total_snapshots = 0;
         let mut total_historical_size = 0u64;
@@ -1103,7 +1103,7 @@ impl DeltaLakeAnalyzer {
 
         // Analyze all metadata files to understand time travel storage
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
             let content_str = String::from_utf8_lossy(&content);
 
             for line in content_str.lines() {
@@ -1283,7 +1283,7 @@ impl DeltaLakeAnalyzer {
 
     async fn analyze_table_constraints(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::TableConstraintsMetrics>> {
         let mut total_constraints = 0;
         let mut check_constraints = 0;
@@ -1293,7 +1293,7 @@ impl DeltaLakeAnalyzer {
 
         // Analyze metadata files for constraint information
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
             let content_str = String::from_utf8_lossy(&content);
 
             for line in content_str.lines() {
@@ -1473,8 +1473,8 @@ impl DeltaLakeAnalyzer {
 
     async fn analyze_file_compaction(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<Option<crate::types::FileCompactionMetrics>> {
         let mut small_files_count = 0;
         let mut small_files_size = 0u64;
@@ -1555,7 +1555,7 @@ impl DeltaLakeAnalyzer {
 
     fn calculate_recommended_target_size(
         &self,
-        data_files: &[&crate::s3_client::ObjectInfo],
+        data_files: &[&crate::storage_client::ObjectInfo],
     ) -> u64 {
         if data_files.is_empty() {
             return 128 * 1024 * 1024; // 128MB default
@@ -1588,11 +1588,11 @@ impl DeltaLakeAnalyzer {
 
     async fn analyze_z_order_opportunity(
         &self,
-        metadata_files: &[&crate::s3_client::ObjectInfo],
+        metadata_files: &[&crate::storage_client::ObjectInfo],
     ) -> Result<(bool, Vec<String>)> {
         // Look for clustering columns that could benefit from Z-ordering
         for metadata_file in metadata_files {
-            let content = self.s3_client.get_object(&metadata_file.key).await?;
+            let content = self.storage_client.get_object(&metadata_file.key).await?;
             let content_str = String::from_utf8_lossy(&content);
 
             for line in content_str.lines() {

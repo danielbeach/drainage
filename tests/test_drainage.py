@@ -10,6 +10,7 @@ import unittest
 import sys
 import os
 from unittest.mock import patch, MagicMock
+import pytest
 
 # Add the parent directory to the path so we can import drainage
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,6 +22,7 @@ except ImportError:
     drainage = None
 
 
+@pytest.mark.unit
 class TestDrainageModule(unittest.TestCase):
     """Test cases for the drainage module."""
 
@@ -415,6 +417,7 @@ class TestDrainageModule(unittest.TestCase):
             )
 
 
+@pytest.mark.integration
 class TestDrainageIntegration(unittest.TestCase):
     """Integration tests for the drainage module."""
 
