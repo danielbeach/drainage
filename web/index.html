@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drainage Delta Health</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --accent: #2563eb;
+      --accent-2: #22d3ee;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #d7deea;
+      --danger: #dc2626;
+      --success: #059669;
+      --mono: 'Fira Code', Menlo, Consolas, monospace;
+      --sans: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 18% 18%, rgba(37,99,235,0.08), transparent 30%),
+          radial-gradient(circle at 82% 12%, rgba(34,211,238,0.10), transparent 28%),
+          radial-gradient(circle at 50% 80%, rgba(15,23,42,0.05), transparent 45%),
+          var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .shell {
+      width: min(1100px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.12);
+      padding: 28px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(37,99,235,0.12);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 13px;
+    }
+    form {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    input, button, select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fdfefe;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: 1px solid var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.18);
+    }
+    button {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #f8fafc;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.08s ease, box-shadow 0.12s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(37,99,235,0.25);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: #fdfefe;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 80px;
+    }
+    .card h4 { margin: 0 0 6px 0; font-size: 14px; color: var(--muted); }
+    .card .value { font-size: 22px; font-weight: 700; }
+    .log {
+      background: #fdfefe;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      max-height: 280px;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 13px;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    .error { color: var(--danger); }
+    .success { color: var(--success); }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="title">Drainage Delta Health</div>
+      <div class="pill">API-backed • ADLS</div>
+    </header>
+    <form id="form">
+      <div>
+        <label>ADLS Delta path</label>
+        <input id="path" name="path" placeholder="abfss://fs@account.dfs.core.windows.net/table/" required />
+      </div>
+      <div class="grid">
+        <div>
+          <label>Client ID (optional, defaults to UAMI)</label>
+          <input id="clientId" name="clientId" placeholder="UAMI client id" />
+        </div>
+        <div>
+          <label>Metadata file count threshold (optional)</label>
+          <input id="metaCount" name="metaCount" type="number" min="1" placeholder="e.g. 100" />
+        </div>
+        <div>
+          <label>Metadata total size threshold bytes (optional)</label>
+          <input id="metaSize" name="metaSize" type="number" min="1" placeholder="e.g. 52428800" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+          <input id="demoMode" type="checkbox" style="width:auto;" />
+          <label for="demoMode">Run in demo mode (local mock data, no ADLS)</label>
+        </div>
+      </div>
+      <button type="submit">Analyze</button>
+    </form>
+    <div class="grid">
+      <div class="card"><h4>Health Score</h4><div class="value" id="healthScore">–</div></div>
+      <div class="card"><h4>Total Files</h4><div class="value" id="totalFiles">–</div></div>
+      <div class="card"><h4>Total Size (MB)</h4><div class="value" id="totalSize">–</div></div>
+      <div class="card"><h4>Metadata Files</h4><div class="value" id="metaFiles">–</div></div>
+    </div>
+    <div class="log" id="log">Awaiting analysis…</div>
+  </div>
+  <script>
+    const form = document.getElementById('form');
+    const logEl = document.getElementById('log');
+    const healthEl = document.getElementById('healthScore');
+    const totalFilesEl = document.getElementById('totalFiles');
+    const totalSizeEl = document.getElementById('totalSize');
+    const metaFilesEl = document.getElementById('metaFiles');
+
+    const fmtMB = (n) => n === undefined ? '–' : (n / (1024*1024)).toFixed(2);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      logEl.textContent = 'Running analysis…';
+
+      const body = {
+        path: document.getElementById('path').value.trim(),
+        client_id: document.getElementById('clientId').value.trim() || undefined,
+        metadata_file_count_threshold: parseInt(document.getElementById('metaCount').value, 10) || undefined,
+        metadata_total_size_threshold: parseInt(document.getElementById('metaSize').value, 10) || undefined,
+        demo_mode: document.getElementById('demoMode').checked,
+      };
+
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`API error ${res.status}: ${txt}`);
+        }
+        const data = await res.json();
+        healthEl.textContent = (data.health_score ?? 0).toFixed(2);
+        totalFilesEl.textContent = data.metrics?.total_files ?? '–';
+        totalSizeEl.textContent = fmtMB(data.metrics?.total_size_bytes ?? 0);
+        metaFilesEl.textContent = data.metrics?.metadata_health?.metadata_file_count ?? '–';
+        logEl.textContent = JSON.stringify(data, null, 2);
+        logEl.classList.remove('error');
+        logEl.classList.add('success');
+      } catch (err) {
+        logEl.textContent = err.message;
+        logEl.classList.add('error');
+      }
+    });
+  </script>
+</body>
+</html>

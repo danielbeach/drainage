@@ -10,8 +10,9 @@ from .delta_lake import DeltaLakeAnalyzer
 from .types import HealthReport
 import asyncio
 import threading
+import os
 
-__all__ = ["ADLSClient", "analyze_table", "analyze_delta_lake"]
+__all__ = ["ADLSClient", "analyze_table", "analyze_delta_lake", "analyze_delta_lake_async"]
 
 
 async def _analyze_delta_async(
@@ -20,6 +21,7 @@ async def _analyze_delta_async(
     metadata_file_count_threshold: int | None = None,
     metadata_total_size_threshold: int | None = None,
 ) -> HealthReport:
+    client_id = client_id or os.getenv("UAMI_DEFAULT_CLIENT_ID")
     client = ADLSClient(path, client_id)
     # If thresholds are None, DeltaLakeAnalyzer will use its internal defaults
     analyzer = DeltaLakeAnalyzer(
@@ -52,6 +54,21 @@ def _run_blocking(coro):
     if "error" in exception_container:
         raise exception_container["error"]
     return result_container.get("value")
+
+
+async def analyze_delta_lake_async(
+    path: str,
+    client_id: str = None,
+    metadata_file_count_threshold: int | None = None,
+    metadata_total_size_threshold: int | None = None,
+) -> HealthReport:
+    """Async-friendly analyzer entrypoint for integration in async servers."""
+    return await _analyze_delta_async(
+        path,
+        client_id,
+        metadata_file_count_threshold=metadata_file_count_threshold,
+        metadata_total_size_threshold=metadata_total_size_threshold,
+    )
 
 
 def analyze_delta_lake(
