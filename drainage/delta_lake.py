@@ -37,7 +37,9 @@ class DeltaLakeAnalyzer:
         )
 
     async def analyze(self) -> HealthReport:
-        table_path = f"abfss://{self.client.get_bucket()}@{self.client._account}.dfs.core.windows.net/{self.client.get_prefix()}"
+        account = getattr(self.client, "get_account", None)
+        account_name = account() if callable(account) else getattr(self.client, "_account", "")
+        table_path = f"abfss://{self.client.get_bucket()}@{account_name}.dfs.core.windows.net/{self.client.get_prefix()}"
         report = HealthReport.new(table_path, "delta")
 
         # list all objects
@@ -55,11 +57,13 @@ class DeltaLakeAnalyzer:
         # parse metadata files (transaction log) to find referenced files
         referenced = set()
         # parse only JSON transaction files to discover referenced data files
+        parse_errors = 0
         for m in [mf for mf in metadata_files if mf.key.endswith(".json")]:
             try:
                 content = await self.client.get_object(m.key)
                 text = content.decode("utf-8", errors="replace")
             except Exception:
+                parse_errors += 1
                 continue
 
             # NDJSON: one JSON object per line or a single JSON array/object
@@ -75,6 +79,7 @@ class DeltaLakeAnalyzer:
                         j = json.loads(text)
                         # if successful, process and break
                     except Exception:
+                        parse_errors += 1
                         break
 
                 # look for add actions
@@ -88,6 +93,9 @@ class DeltaLakeAnalyzer:
                         for item in j["add"]:
                             if isinstance(item, dict) and "path" in item:
                                 referenced.add(item["path"])
+                # once full-content parse succeeds, stop iterating lines to avoid duplicate work
+                if "j" in locals():
+                    break
 
         # --- Metadata health: count and sizes of _delta_log files ---
         metadata_count = len(metadata_files)
@@ -95,9 +103,7 @@ class DeltaLakeAnalyzer:
         avg_metadata_size = metadata_total / metadata_count if metadata_count > 0 else 0
         # Count checkpoint/parquet files inside the _delta_log (checkpoints are parquet)
         manifest_file_count = sum(
-            1
-            for m in metadata_files
-            if m.key.endswith(".parquet") or m.key.endswith(".checkpoint.parquet")
+            1 for m in metadata_files if m.key.endswith(".parquet")
         )
 
         # Compute metrics
@@ -128,6 +134,11 @@ class DeltaLakeAnalyzer:
         ):
             metrics.recommendations.append(
                 "Large Delta log detected — many transaction/checkpoint files; consider optimizing metadata (compact checkpoints, run VACUUM/OPTIMIZE)."
+            )
+
+        if parse_errors > 0:
+            metrics.recommendations.append(
+                "One or more Delta log entries could not be parsed; check _delta_log for corruption or unsupported format."
             )
 
         # find unreferenced files

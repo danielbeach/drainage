@@ -9,6 +9,7 @@ from .adls_client import ADLSClient
 from .delta_lake import DeltaLakeAnalyzer
 from .types import HealthReport
 import asyncio
+import threading
 
 __all__ = ["ADLSClient", "analyze_table", "analyze_delta_lake"]
 
@@ -29,6 +30,30 @@ async def _analyze_delta_async(
     return await analyzer.analyze()
 
 
+def _run_blocking(coro):
+    """Run a coroutine from sync code, even if a loop is already running (blocks caller)."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    result_container = {}
+    exception_container = {}
+
+    def runner():
+        try:
+            result_container["value"] = asyncio.run(coro)
+        except Exception as exc:  # pragma: no cover - bubble to caller
+            exception_container["error"] = exc
+
+    t = threading.Thread(target=runner, daemon=True)
+    t.start()
+    t.join()
+    if "error" in exception_container:
+        raise exception_container["error"]
+    return result_container.get("value")
+
+
 def analyze_delta_lake(
     path: str,
     client_id: str = None,
@@ -39,8 +64,9 @@ def analyze_delta_lake(
 
     `path` should be an ADLS URL (e.g. `abfss://<filesystem>@<account>.dfs.core.windows.net/<prefix>`)
     `client_id` is optional user-assigned managed identity client id (UAMI)
+    Safe for callers that already have a running asyncio loop (runs the analyzer in a helper thread).
     """
-    return asyncio.run(
+    return _run_blocking(
         _analyze_delta_async(
             path,
             client_id,

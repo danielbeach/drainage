@@ -12,6 +12,7 @@ Authentication supported:
 
 from typing import List, Optional
 from dataclasses import dataclass
+import asyncio
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.storage.filedatalake import DataLakeServiceClient
 from urllib.parse import urlparse
@@ -90,23 +91,32 @@ class ADLSClient:
         client in a threadpool.
         """
         effective_prefix = prefix or self._prefix
-        results: List[ObjectInfo] = []
 
-        path_iter = self._filesystem_client.get_paths(
-            path=effective_prefix, recursive=True
-        )
-        for p in path_iter:
-            # skip directories
-            if p.is_directory:
-                continue
-            key = p.name
-            size = p.content_length or 0
-            last_mod = p.last_modified.isoformat() if p.last_modified else None
-            results.append(ObjectInfo(key=key, size=size, last_modified=last_mod))
-        return results
+        def _list_sync() -> List[ObjectInfo]:
+            results: List[ObjectInfo] = []
+            path_iter = self._filesystem_client.get_paths(
+                path=effective_prefix, recursive=True
+            )
+            for p in path_iter:
+                # skip directories
+                if p.is_directory:
+                    continue
+                key = p.name
+                size = p.content_length or 0
+                last_mod = p.last_modified.isoformat() if p.last_modified else None
+                results.append(ObjectInfo(key=key, size=size, last_modified=last_mod))
+            return results
+
+        return await asyncio.to_thread(_list_sync)
 
     async def get_object(self, key: str) -> bytes:
-        file_client = self._filesystem_client.get_file_client(key)
-        download = file_client.download_file()
-        data = download.readall()
-        return data
+        def _get_sync() -> bytes:
+            file_client = self._filesystem_client.get_file_client(key)
+            download = file_client.download_file()
+            data = download.readall()
+            return data
+
+        return await asyncio.to_thread(_get_sync)
+
+    def get_account(self) -> str:
+        return self._account
