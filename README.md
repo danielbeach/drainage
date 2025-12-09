@@ -3,37 +3,35 @@
 [![CI](https://github.com/danielbeach/drainage/workflows/CI/badge.svg)](https://github.com/danielbeach/drainage/actions)
 [![codecov](https://codecov.io/gh/danielbeach/drainage/branch/main/graph/badge.svg)](https://codecov.io/gh/danielbeach/drainage)
 [![PyPI version](https://badge.fury.io/py/drainage.svg)](https://badge.fury.io/py/drainage)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org)
 
 🌊  D R A I N A G E  🦀    
-Rust + Python Lake House Health Analyzer 
+Python Lake House Health Analyzer 
 Detect • Diagnose • Optimize • Flow 
 
-A high-performance Rust library with Python bindings for analyzing the health of remote S3-stored data lakes (Delta Lake and Apache Iceberg). 
+A Python library for analyzing the health of Delta Lake tables stored on Azure Data Lake Storage (ADLS). Drainage helps you understand and optimize your Delta Lake tables by identifying issues like unreferenced files, suboptimal partitioning, and inefficient file sizes.
 Drainage helps you understand and optimize your data lake by identifying issues like unreferenced files, suboptimal partitioning, and inefficient file sizes.
 
 ## Features
 
-- **🚀 Fast Analysis**: Built in Rust for maximum performance
+- **🚀 Fast Analysis**: Efficient Python implementation for broad portability
 - **📊 Comprehensive Health Metrics**: 
   - Unreferenced and orphaned data files detection
-  - Partition and clustering analysis (Delta Lake liquid clustering + Iceberg clustering)
+  - Partition and clustering analysis (Delta Lake liquid clustering)
   - File size distribution and optimization recommendations
   - Data skew analysis (partition and file size skew)
   - Metadata health monitoring
   - Snapshot retention analysis
-  - **Deletion vector impact analysis** (Delta Lake & Iceberg v3+)
-  - **Schema evolution stability tracking** (Delta Lake & Iceberg)
-  - **Time travel storage cost analysis** (Delta Lake & Iceberg)
-  - **Table constraints and data quality insights** (Delta Lake & Iceberg)
-  - **Advanced file compaction optimization** (Delta Lake & Iceberg)
+  - **Deletion vector impact analysis** (Delta Lake)
+  - **Schema evolution stability tracking** (Delta Lake)
+  - **Time travel storage cost analysis** (Delta Lake)
+  - **Table constraints and data quality insights** (Delta Lake)
+  - **Advanced file compaction optimization** (Delta Lake)
   - Overall health score calculation
 - **🔍 Multi-Format Support**:
   - **Delta Lake tables** (including liquid clustering support)
-  - **Apache Iceberg tables** (including clustering support)
-- **☁️ S3 Native**: Direct S3 integration for analyzing remote data lakes
-- **🐍 Python Interface**: Easy-to-use Python API powered by PyO3
+  - **☁️ ADLS Native**: Direct integration with Azure Data Lake Storage (supports UAMI)
+  - **🐍 Python Interface**: Easy-to-use Python API
 - **🧪 Comprehensive Testing**: Full test suite with CI/CD across multiple platforms
 
 ## Installation
@@ -44,17 +42,15 @@ Drainage helps you understand and optimize your data lake by identifying issues 
 pip install drainage
 ```
 
-> **Note**: This package is automatically built and published to PyPI using GitHub Actions when version tags are pushed.
-
 ### From Source
 
 ```bash
-# Install maturin for building Rust Python extensions
-pip install maturin
+# Install editable package from source
+pip install -e .
 
-# Build and install the package
-cd drainage
-maturin develop --release
+# Or build a wheel and install
+python -m build
+pip install dist/*.whl
 ```
 
 ## Quick Start
@@ -64,11 +60,8 @@ maturin develop --release
 ```python
 import drainage
 
-# Analyze any table with automatic type detection
-report = drainage.analyze_table(
-    s3_path="s3://my-bucket/my-table",
-    aws_region="us-west-2"
-)
+# Analyze any table (Delta Lake on ADLS) with automatic detection
+report = drainage.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-table")
 
 # Print a comprehensive health report
 drainage.print_health_report(report)
@@ -84,75 +77,14 @@ print(f"Total Files: {report.metrics.total_files}")
 ```python
 import drainage
 
-# Analyze a Delta Lake table
-report = drainage.analyze_delta_lake(
-    s3_path="s3://my-bucket/my-delta-table",
-    aws_access_key_id="YOUR_ACCESS_KEY",  # Optional if using IAM roles
-    aws_secret_access_key="YOUR_SECRET_KEY",  # Optional if using IAM roles
-    aws_region="us-west-2"  # Optional, defaults to us-east-1
-)
+# Analyze a Delta Lake table on ADLS
+report = drainage.analyze_delta_lake("abfss://myfs@account.dfs.core.windows.net/my-delta-table")
 
-# View the health score (0.0 to 1.0)
 print(f"Health Score: {report.health_score}")
-
-# Check metrics
 print(f"Total Files: {report.metrics.total_files}")
 print(f"Total Size: {report.metrics.total_size_bytes} bytes")
 print(f"Unreferenced Files: {len(report.metrics.unreferenced_files)}")
-print(f"Partition Count: {report.metrics.partition_count}")
-
-# View recommendations
-for recommendation in report.metrics.recommendations:
-    print(f"⚠️  {recommendation}")
 ```
-
-### Analyzing an Apache Iceberg Table
-
-```python
-import drainage
-
-# Analyze an Apache Iceberg table
-report = drainage.analyze_iceberg(
-    s3_path="s3://my-bucket/my-iceberg-table",
-    aws_region="us-west-2"
-)
-
-# View file size distribution
-dist = report.metrics.file_size_distribution
-print(f"Small files (<16MB): {dist.small_files}")
-print(f"Medium files (16-128MB): {dist.medium_files}")
-print(f"Large files (128MB-1GB): {dist.large_files}")
-print(f"Very large files (>1GB): {dist.very_large_files}")
-```
-## Working on Databricks
-```
-import drainage
-# Alternative: Use the table location directly
-tables = spark.sql("SHOW TABLES IN development.backend_dev")
-for table in tables.collect():
-    table_name = table['tableName']
-    
-    # Get table properties including location
-    table_info = spark.sql(f"DESCRIBE TABLE EXTENDED development.main.{table_name}")
-    
-    # Look for Location in the output
-    location_rows = table_info.filter(table_info['col_name'] == 'Location').collect()
-    
-    if location_rows:
-        s3_path = location_rows[0]['data_type']
-        print(f"Table: {table_name}, Location: {s3_path}")
-        
-        # Test if this is a valid Delta Lake table
-        if s3_path.startswith("s3://") and "__unitystorage" in s3_path:
-            print(f"✅ Unity Catalog Delta table: {s3_path}")
-            # Try analysis
-            try:
-                report = drainage.analyze_table(s3_path=s3_path, aws_region="us-east-1")
-                drainage.print_health_report(report)
-            except Exception as e:
-                print(f"❌ Analysis failed: {e}")
-```
-
 
 ## Health Metrics Explained
 
@@ -160,7 +92,7 @@ for table in tables.collect():
 
 The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is calculated based on:
 
-- **Unreferenced Files** (-30%): Files that exist in S3 but aren't referenced in table metadata
+-- **Unreferenced Files** (-30%): Files that exist in the data lake but aren't referenced in table metadata
 - **Small Files** (-20%): High percentage of small files (<16MB) indicates inefficient storage
 - **Very Large Files** (-10%): Files over 1GB may cause performance issues
 - **Partitioning** (-10-15%): Too many or too few files per partition
@@ -195,12 +127,11 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `large_files`: Files between 128MB and 1GB
 - `very_large_files`: Files over 1GB
 
-#### Clustering (Delta Lake & Iceberg)
+#### Clustering (Delta Lake)
 - `clustering_columns`: Columns used for clustering/sorting
 - `cluster_count`: Number of clusters
 - `avg_files_per_cluster`: Average files per cluster
 - **Delta Lake**: Supports liquid clustering (up to 4 columns)
-- **Iceberg**: Supports traditional clustering and Z-order
 
 #### Data Skew Analysis
 - `partition_skew_score`: How unevenly data is distributed across partitions (0.0 = perfect, 1.0 = highly skewed)
@@ -215,7 +146,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `metadata_total_size_bytes`: Combined size of all metadata files
 - `avg_metadata_file_size`: Average size of metadata files
 - `metadata_growth_rate`: Estimated metadata growth rate
-- `manifest_file_count`: Number of manifest files (Iceberg only)
+- `manifest_file_count`: Number of manifest files (Iceberg not supported in this release)
 
 #### Snapshot Health
 - `snapshot_count`: Number of historical snapshots
@@ -224,7 +155,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `avg_snapshot_age_days`: Average snapshot age
 - `snapshot_retention_risk`: Risk level based on snapshot count (0.0 = good, 1.0 = high risk)
 
-#### Deletion Vector Analysis (Delta Lake & Iceberg v3+)
+#### Deletion Vector Analysis (Delta Lake)
 - `deletion_vector_count`: Number of deletion vectors
 - `total_deletion_vector_size_bytes`: Total size of all deletion vectors
 - `avg_deletion_vector_size_bytes`: Average deletion vector size
@@ -232,7 +163,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `deleted_rows_count`: Total number of deleted rows
 - `deletion_vector_impact_score`: Performance impact score (0.0 = no impact, 1.0 = high impact)
 
-#### Schema Evolution Tracking (Delta Lake & Iceberg)
+#### Schema Evolution Tracking (Delta Lake)
 - `total_schema_changes`: Total number of schema changes
 - `breaking_changes`: Number of breaking schema changes
 - `non_breaking_changes`: Number of non-breaking schema changes
@@ -241,7 +172,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `schema_change_frequency`: Schema changes per day
 - `current_schema_version`: Current schema version
 
-#### Time Travel Analysis (Delta Lake & Iceberg)
+#### Time Travel Analysis (Delta Lake)
 - `total_snapshots`: Total number of historical snapshots
 - `oldest_snapshot_age_days`: Age of the oldest snapshot in days
 - `newest_snapshot_age_days`: Age of the newest snapshot in days
@@ -251,7 +182,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `retention_efficiency_score`: Retention efficiency score (0.0 = inefficient, 1.0 = very efficient)
 - `recommended_retention_days`: Recommended retention period in days
 
-#### Table Constraints Analysis (Delta Lake & Iceberg)
+#### Table Constraints Analysis (Delta Lake)
 - `total_constraints`: Total number of table constraints
 - `check_constraints`: Number of check constraints
 - `not_null_constraints`: Number of NOT NULL constraints
@@ -261,7 +192,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 - `data_quality_score`: Data quality score based on constraints (0.0 = poor quality, 1.0 = excellent quality)
 - `constraint_coverage_score`: Constraint coverage score (0.0 = no coverage, 1.0 = full coverage)
 
-#### File Compaction Analysis (Delta Lake & Iceberg)
+#### File Compaction Analysis (Delta Lake)
 - `compaction_opportunity_score`: Compaction opportunity score (0.0 = no opportunity, 1.0 = high opportunity)
 - `small_files_count`: Number of small files (<16MB)
 - `small_files_size_bytes`: Total size of small files
@@ -280,15 +211,15 @@ Drainage automatically generates recommendations based on the analysis:
 - **Small Files**: Recommends compaction to improve query performance
 - **Large Files**: Suggests splitting for better parallelism
 - **Partition Issues**: Advises on repartitioning strategy
-- **Clustering Issues**: Recommends clustering optimization (Delta Lake liquid clustering, Iceberg clustering)
+- **Clustering Issues**: Recommends clustering optimization (Delta Lake liquid clustering)
 - **Data Skew**: Recommends repartitioning or file reorganization to balance data distribution
-- **Metadata Bloat**: Suggests running VACUUM (Delta) or expire_snapshots (Iceberg) to clean up metadata
+- **Metadata Bloat**: Suggests running VACUUM (Delta) to clean up metadata
 - **Snapshot Retention**: Advises on snapshot cleanup to improve performance
-- **Deletion Vector Issues**: Recommends VACUUM (Delta) or expire_snapshots (Iceberg) to clean up old deletion vectors
+-- **Deletion Vector Issues**: Recommends VACUUM (Delta) to clean up old deletion vectors
 - **Schema Evolution Issues**: Advises on schema change planning and batching to improve stability
 - **Time Travel Storage Issues**: Recommends optimizing retention policies to reduce storage costs
 - **Data Quality Issues**: Suggests adding table constraints to improve data quality
-- **File Compaction Issues**: Recommends OPTIMIZE (Delta) or rewrite_data_files (Iceberg) for performance
+-- **File Compaction Issues**: Recommends OPTIMIZE (Delta) for performance
 - **Z-Ordering Opportunities**: Suggests Z-ordering to improve query performance
 - **Empty Partitions**: Suggests removing empty partition directories
 
@@ -302,11 +233,12 @@ import json
 
 def print_health_report(report):
     """Print a comprehensive health report."""
-    
+  - **Deletion vector impact analysis** (Delta Lake only in this release)
     # Print summary
     print(f"\n{'='*60}")
-    print(f"Table Health Report: {report.table_path}")
+  - Apache Iceberg support removed — Delta Lake only in this release
     print(f"Type: {report.table_type}")
+-- **☁️ ADLS Native**: Direct integration with Azure Data Lake Storage (supports UAMI)
     print(f"Analysis Time: {report.analysis_timestamp}")
     print(f"{'='*60}\n")
     
@@ -341,11 +273,11 @@ def print_health_report(report):
     return report
 
 # Using the built-in analyze_table function with auto-detection
-report = drainage.analyze_table("s3://my-bucket/my-table", aws_region="us-west-2")
+report = drainage.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-table")
 drainage.print_health_report(report)
 
 # Or specify the table type explicitly
-report = drainage.analyze_table("s3://my-bucket/my-delta-table", table_type="delta", aws_region="us-west-2")
+report = drainage.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-delta-table", table_type="delta")
 drainage.print_health_report(report)
 ```
 
@@ -356,25 +288,19 @@ The `examples/` directory contains ready-to-use scripts:
 #### Simple Analysis (Recommended)
 
 ```bash
-python examples/simple_analysis.py s3://my-bucket/my-table us-west-2
+python examples/simple_analysis.py abfss://myfs@account.dfs.core.windows.net/my-table
 ```
 
 #### Analyze Any Table (Auto-Detection)
 
 ```bash
-python examples/analyze_any_table.py s3://my-bucket/my-table us-west-2
+python examples/analyze_any_table.py abfss://myfs@account.dfs.core.windows.net/my-table
 ```
 
 #### Analyze a Single Delta Table
 
 ```bash
-python examples/analyze_delta_table.py s3://my-bucket/my-table us-west-2
-```
-
-#### Analyze a Single Iceberg Table
-
-```bash
-python examples/analyze_iceberg_table.py s3://my-bucket/my-table us-west-2
+python examples/analyze_delta_table.py abfss://myfs@account.dfs.core.windows.net/my-table
 ```
 
 #### Monitor Multiple Tables
@@ -390,30 +316,27 @@ import drainage
 from datetime import datetime
 
 tables = [
-    ("s3://bucket/sales_data", "delta"),
-    ("s3://bucket/user_events", "iceberg"),
-    ("s3://bucket/products", "delta"),
+  ("abfss://salesfs@account.dfs.core.windows.net/sales_data", "delta"),
+  ("abfss://eventsfs@account.dfs.core.windows.net/user_events", "delta"),
+  ("abfss://productsfs@account.dfs.core.windows.net/products", "delta"),
 ]
 
 results = []
 
-for s3_path, table_type in tables:
-    try:
-        if table_type == "delta":
-            report = drainage.analyze_delta_lake(s3_path, aws_region="us-west-2")
-        else:
-            report = drainage.analyze_iceberg(s3_path, aws_region="us-west-2")
-        
-        results.append({
-            "path": s3_path,
-            "type": table_type,
-            "health_score": report.health_score,
-            "total_files": report.metrics.total_files,
-            "unreferenced_files": len(report.metrics.unreferenced_files),
-            "recommendations": len(report.metrics.recommendations)
-        })
+for path, table_type in tables:
+  try:
+    report = drainage.analyze_table(path)
+
+    results.append({
+      "path": path,
+      "type": table_type,
+      "health_score": report.health_score,
+      "total_files": report.metrics.total_files,
+      "unreferenced_files": len(report.metrics.unreferenced_files),
+      "recommendations": len(report.metrics.recommendations)
+    })
     except Exception as e:
-        print(f"Error analyzing {s3_path}: {e}")
+        print(f"Error analyzing {path}: {e}")
 
 # Sort by health score
 results.sort(key=lambda x: x["health_score"])
@@ -431,7 +354,7 @@ Here's what a comprehensive health report looks like with all the new advanced m
 
 ```
 ============================================================
-Table Health Report: s3://my-bucket/my-delta-table
+Table Health Report: abfss://myfs@account.dfs.core.windows.net/my-delta-table
 Type: delta
 Analysis Time: 2025-01-27T10:30:00Z
 ============================================================
@@ -534,7 +457,7 @@ Analysis Time: 2025-01-27T10:30:00Z
   Count:  5
   Wasted: 12.3 MB
 
-  These files exist in S3 but are not referenced in the
+  These files exist in ADLS but are not referenced in the
   Delta transaction log. Consider cleaning them up.
 
 💡 Recommendations:
@@ -554,31 +477,34 @@ Analysis Time: 2025-01-27T10:30:00Z
 
 Drainage is built with:
 
-- **Rust Core**: High-performance analysis engine
-- **PyO3**: Seamless Python-Rust integration
-- **AWS SDK**: Native S3 integration
-- **Tokio**: Async runtime for concurrent operations
+- **Python Implementation**: Pure Python analyzer (Rust components removed)
+- **Azure ADLS SDK**: Native ADLS integration via `azure-identity` and `azure-storage-file-datalake`
+- **Async I/O**: Uses `asyncio` for concurrent operations
 
-The library analyzes table metadata (Delta transaction logs, Iceberg manifests) and compares it against actual S3 objects to identify issues and provide optimization recommendations.
+The library analyzes table metadata (Delta transaction logs) and compares it against actual ADLS objects to identify issues and provide optimization recommendations.
+
+### Metadata health thresholds
+
+The analyzer computes basic metadata health metrics (transaction/log file counts, total metadata size and checkpoint counts). You can override the thresholds used to trigger metadata-bloat recommendations by passing `metadata_file_count_threshold` and/or `metadata_total_size_threshold` to `analyze_delta_lake` (e.g., `analyze_delta_lake(path, metadata_file_count_threshold=200)`).
 
 ## Development
 
 ### Building
 
 ```bash
-# Development build
-maturin develop
+# Install dev dependencies
+pip install -r requirements-dev.txt
 
-# Release build
-maturin develop --release
+# Install in editable mode for development
+pip install -e .
 
-# Build wheel
-maturin build --release
+# Build wheel (PEP 517)
+python -m build
 ```
 
 ### Testing
 
-Drainage includes a comprehensive test suite covering both Rust and Python code, with automated CI/CD testing across multiple platforms and Python versions.
+Drainage includes a comprehensive Python test suite, with automated CI/CD testing across multiple platforms and supported Python versions.
 
 #### Quick Start
 
@@ -591,20 +517,6 @@ python run_tests.py --all
 ```
 
 #### Test Categories
-
-**Rust Unit Tests**
-```bash
-# Run Rust tests
-make test-rust
-# or
-cargo test
-
-# Run with verbose output
-cargo test --verbose
-
-# Run specific test module
-cargo test types::tests
-```
 
 **Python Tests**
 ```bash
@@ -657,11 +569,7 @@ make lint
 # Format code
 make format
 
-# Check Rust formatting
-cargo fmt -- --check
 
-# Check Rust linting
-cargo clippy -- -D warnings
 
 # Check Python formatting
 black --check tests/ examples/
@@ -675,9 +583,7 @@ flake8 tests/ examples/ --max-line-length=100
 # Run security audits
 make security
 
-# Rust security audit
-cargo audit
-
+ 
 # Python security check
 safety check
 
@@ -723,7 +629,7 @@ Drainage uses GitHub Actions for automated testing on:
 
 - **Operating Systems**: Ubuntu, Windows, macOS
 - **Python Versions**: 3.8, 3.9, 3.10, 3.11, 3.12
-- **Rust Versions**: Stable, Beta, Nightly
+ 
 
 **CI Pipeline Includes:**
 1. **Multi-Platform Testing**: Tests run on all supported platforms
@@ -760,15 +666,11 @@ def test_analyze_delta_lake_parameters():
         mock_analyze.return_value = mock_report
         
         result = drainage.analyze_delta_lake(
-            s3_path="s3://test-bucket/test-table/",
-            aws_region="us-west-2"
+          "abfss://testfs@account.dfs.core.windows.net/test-table/",
         )
-        
+
         mock_analyze.assert_called_once_with(
-            s3_path="s3://test-bucket/test-table/",
-            aws_access_key_id=None,
-            aws_secret_access_key=None,
-            aws_region="us-west-2"
+          "abfss://testfs@account.dfs.core.windows.net/test-table/",
         )
         assert result == mock_report
 ```
@@ -777,7 +679,7 @@ def test_analyze_delta_lake_parameters():
 ```python
 def test_with_mock_report(mock_health_report):
     """Test with mock health report."""
-    assert mock_health_report.table_path == "s3://test-bucket/test-table/"
+    assert mock_health_report.table_path == "abfss://testfs@account.dfs.core.windows.net/test-table/"
     assert mock_health_report.health_score == 0.85
 ```
 
@@ -804,7 +706,6 @@ make help                    # Show all available targets
 make install                 # Install dependencies
 make build                   # Build the project
 make test                    # Run all tests
-make test-rust              # Run Rust tests only
 make test-python            # Run Python tests only
 make test-integration       # Run integration tests only
 make lint                    # Run linting checks
@@ -845,8 +746,8 @@ make info                   # Show project info
 
 Drainage is designed for speed:
 
-- ⚡ Async I/O for concurrent S3 operations
-- 🦀 Rust performance for data processing
+- ⚡ Async I/O for concurrent ADLS operations
+- 🐍 Python-first implementation optimized for clarity and portability
 - 📦 Efficient memory usage for large tables
 
 Typical analysis times:
@@ -868,7 +769,7 @@ Typical analysis times:
 
 To release a new version:
 
-1. Update the version in `pyproject.toml` and `Cargo.toml`
+1. Update the version in `pyproject.toml`
 2. Commit and push changes
 3. Create and push a version tag:
    ```bash

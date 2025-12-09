@@ -1,5 +1,5 @@
 # Core dependencies
-maturin>=1.0,<2.0
+# (No Rust build tools required for Python-only package)
 
 # Testing dependencies
 pytest>=7.0.0
@@ -19,3 +19,5 @@ sphinx-rtd-theme>=1.2.0
 
 # Development
 twine>=4.0.0
+azure-identity>=1.12.0
+azure-storage-file-datalake>=12.8.0

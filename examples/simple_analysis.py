@@ -14,21 +14,24 @@ def main():
     """Simple table analysis with built-in formatting."""
 
     if len(sys.argv) < 2:
-        print("Usage: python simple_analysis.py <s3_path> [aws_region]")
+        print("Usage: python simple_analysis.py <adls_path> [uami_client_id]")
         print("\nExample:")
-        print("  python simple_analysis.py s3://my-bucket/my-table us-west-2")
+        print(
+            "  python simple_analysis.py abfss://fs@account.dfs.core.windows.net/my-table"
+        )
         sys.exit(1)
 
-    s3_path = sys.argv[1]
-    aws_region = sys.argv[2] if len(sys.argv) > 2 else "us-west-2"
+    path = sys.argv[1]
+    client_id = sys.argv[2] if len(sys.argv) > 2 else None
 
-    print(f"Analyzing table: {s3_path}")
-    print(f"Region: {aws_region}")
+    print(f"Analyzing table: {path}")
+    if client_id:
+        print(f"Using UAMI client id: {client_id}")
     print("This may take a few moments...\n")
 
     try:
         # Analyze the table (auto-detects type)
-        report = drainage.analyze_table(s3_path, aws_region=aws_region)
+        report = drainage.analyze_table(path, None, client_id)
 
         # Print the comprehensive health report
         drainage.print_health_report(report)

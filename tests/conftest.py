@@ -30,7 +30,7 @@ def drainage_module():
 def mock_health_report():
     """Create a mock health report for testing."""
     mock_report = MagicMock()
-    mock_report.table_path = "s3://test-bucket/test-table/"
+    mock_report.table_path = "abfss://testfs@account.dfs.core.windows.net/test-table/"
     mock_report.table_type = "delta"
     mock_report.analysis_timestamp = "2023-01-01T00:00:00Z"
     mock_report.health_score = 0.85
@@ -121,84 +121,35 @@ def mock_delta_lake_objects():
 
 
 @pytest.fixture
-def mock_iceberg_objects():
-    """Create mock Iceberg objects for testing."""
+def valid_adls_paths():
+    """Provide valid ADLS paths for testing."""
     return [
-        MagicMock(
-            key="data/00000-0-00000000000000000000-00000000000000000000.parquet",
-            size=1024 * 1024,
-            last_modified="2023-01-01T00:00:00Z",
-            etag="etag1",
-        ),
-        MagicMock(
-            key="data/00000-1-00000000000000000000-00000000000000000000.parquet",
-            size=1024 * 1024,
-            last_modified="2023-01-01T00:00:00Z",
-            etag="etag2",
-        ),
-        MagicMock(
-            key="metadata/00000-00000000000000000000.metadata.json",
-            size=2048,
-            last_modified="2023-01-01T00:00:00Z",
-            etag="etag3",
-        ),
-        MagicMock(
-            key="metadata/snap-00000000000000000000-1-00000000000000000000.avro",
-            size=1024,
-            last_modified="2023-01-01T00:00:00Z",
-            etag="etag4",
-        ),
+        "abfss://testfs@account.dfs.core.windows.net/table/",
+        "abfss://myfs@account.dfs.core.windows.net/my-table/",
+        "https://account.dfs.core.windows.net/myfs/table/",
     ]
 
 
 @pytest.fixture
-def valid_s3_paths():
-    """Provide valid S3 paths for testing."""
-    return [
-        "s3://bucket/table/",
-        "s3://my-bucket/my-table/",
-        "s3://bucket.with.dots/table/",
-        "s3://bucket/path/to/table/",
-    ]
-
-
-@pytest.fixture
-def invalid_s3_paths():
-    """Provide invalid S3 paths for testing."""
+def invalid_adls_paths():
+    """Provide invalid ADLS paths for testing."""
     return [
         "not-a-url",
-        "https://bucket/table/",
-        "ftp://bucket/table/",
-        "s3://",
-        "s3:///",
+        "ftp://account.dfs.core.windows.net/myfs/",
+        "abfss://",
     ]
-
-
-@pytest.fixture
-def valid_aws_regions():
-    """Provide valid AWS regions for testing."""
-    return [
-        "us-east-1",
-        "us-west-2",
-        "eu-west-1",
-        "ap-southeast-1",
-        "ca-central-1",
-    ]
-
-
-@pytest.fixture
-def valid_aws_credentials():
-    """Provide valid AWS credentials for testing."""
-    return {
-        "access_key_id": "AKIAIOSFODNN7EXAMPLE",
-        "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-    }
 
 
 @pytest.fixture
 def valid_table_types():
     """Provide valid table types for testing."""
-    return ["delta", "iceberg", "Delta", "Iceberg", "DELTA", "ICEBERG"]
+    return ["delta", "Delta", "DELTA"]
+
+
+@pytest.fixture
+def valid_table_types():
+    """Provide valid table types for testing."""
+    return ["delta", "Delta", "DELTA"]
 
 
 @pytest.fixture
@@ -208,58 +159,20 @@ def invalid_table_types():
 
 
 @pytest.fixture
-def mock_s3_client():
-    """Create a mock S3 client for testing."""
+def mock_adls_client():
+    """Create a mock ADLS client for testing."""
     mock_client = MagicMock()
-    mock_client.list_objects_v2.return_value = MagicMock()
-    mock_client.get_object.return_value = MagicMock()
+    mock_client.list_paths.return_value = []
+    mock_client.get_file.return_value = b"test data"
     return mock_client
 
 
 @pytest.fixture
-def mock_aws_config():
-    """Create a mock AWS config for testing."""
-    mock_config = MagicMock()
-    mock_config.region.return_value = "us-west-2"
-    return mock_config
-
-
-@pytest.fixture
-def mock_aws_credentials():
-    """Create mock AWS credentials for testing."""
-    mock_creds = MagicMock()
-    mock_creds.access_key_id.return_value = "AKIAIOSFODNN7EXAMPLE"
-    mock_creds.secret_access_key.return_value = (
-        "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-    )
-    mock_creds.session_token.return_value = None
-    mock_creds.expiry.return_value = None
-    mock_creds.provider_name.return_value = "drainage"
-    return mock_creds
-
-
-@pytest.fixture(autouse=True)
-def mock_aws_environment():
-    """Mock AWS environment variables for testing."""
-    with patch.dict(
-        os.environ,
-        {
-            "AWS_ACCESS_KEY_ID": "test-access-key",
-            "AWS_SECRET_ACCESS_KEY": "test-secret-key",
-            "AWS_DEFAULT_REGION": "us-west-2",
-        },
-    ):
-        yield
-
-
-@pytest.fixture
-def mock_tokio_runtime():
-    """Mock the tokio runtime for testing."""
-    with patch("drainage.tokio.runtime.Runtime") as mock_runtime:
-        mock_rt = MagicMock()
-        mock_rt.block_on.return_value = MagicMock()
-        mock_runtime.new.return_value = mock_rt
-        yield mock_rt
+def mock_health_analyzer():
+    """Create a mock health analyzer for testing."""
+    mock_analyzer = MagicMock()
+    mock_analyzer.get_table_info.return_value = ("testfs", "test-prefix")
+    return mock_analyzer
 
 
 @pytest.fixture
@@ -279,16 +192,8 @@ def mock_delta_lake_analyzer():
 
 
 @pytest.fixture
-def mock_iceberg_analyzer():
-    """Create a mock Iceberg analyzer for testing."""
-    mock_analyzer = MagicMock()
-    mock_analyzer.analyze.return_value = MagicMock()
-    return mock_analyzer
-
-
-@pytest.fixture
-def mock_s3_client_wrapper():
-    """Create a mock S3 client wrapper for testing."""
+def mock_storage_client_wrapper():
+    """Create a mock storage client wrapper for testing (ADLS-like)."""
     mock_wrapper = MagicMock()
     mock_wrapper.get_bucket.return_value = "test-bucket"
     mock_wrapper.get_prefix.return_value = "test-prefix"

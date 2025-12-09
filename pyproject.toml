@@ -1,15 +1,15 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "drainage"
 version = "0.1.7"
-description = "High-performance data lake health analyzer for Delta Lake and Apache Iceberg"
+description = "Data lake health analyzer for Delta Lake on ADLS (Python-only)"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
-keywords = ["data-lake", "delta-lake", "iceberg", "s3", "analytics", "data-engineering"]
+keywords = ["data-lake", "delta-lake", "adls", "analytics", "data-engineering"]
 authors = [
     { name = "Daniel Beach", email = "daniel@example.com" }
 ]
@@ -22,10 +22,13 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Rust",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Database",
+]
+
+dependencies = [
+    "azure-identity>=1.12.0",
+    "azure-storage-file-datalake>=12.6.0"
 ]
 
 [project.urls]
@@ -33,7 +36,4 @@ Homepage = "https://github.com/danielbeach/drainage"
 Repository = "https://github.com/danielbeach/drainage"
 Documentation = "https://github.com/danielbeach/drainage#readme"
 Issues = "https://github.com/danielbeach/drainage/issues"
-
-[tool.maturin]
-module-name = "drainage"
 

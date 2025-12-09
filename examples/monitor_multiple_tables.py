@@ -11,13 +11,12 @@ from datetime import datetime
 from typing import List, Tuple
 
 
-def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2"):
+def monitor_tables(tables: List[Tuple[str, str]], client_id: str = None):
     """
     Monitor health of multiple data lake tables.
 
     Args:
-        tables: List of (s3_path, table_type) tuples
-        aws_region: AWS region
+        tables: List of (path, table_type) tuples (ADLS paths expected)
 
     Returns:
         List of analysis results
@@ -31,21 +30,15 @@ def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2")
 
     results = []
 
-    for i, (s3_path, table_type) in enumerate(tables, 1):
-        print(f"[{i}/{len(tables)}] Analyzing {s3_path} ({table_type})...")
+    for i, (path, table_type) in enumerate(tables, 1):
+        print(f"[{i}/{len(tables)}] Analyzing {path} ({table_type})...")
 
         try:
-            if table_type.lower() == "delta":
-                report = drainage.analyze_delta_lake(s3_path, aws_region=aws_region)
-            elif table_type.lower() == "iceberg":
-                report = drainage.analyze_iceberg(s3_path, aws_region=aws_region)
-            else:
-                print(f"  ⚠️  Unknown table type: {table_type}")
-                continue
+            report = drainage.analyze_delta_lake(path, client_id)
 
             results.append(
                 {
-                    "path": s3_path,
+                    "path": path,
                     "type": table_type,
                     "health_score": report.health_score,
                     "total_files": report.metrics.total_files,
@@ -63,7 +56,7 @@ def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2")
 
         except Exception as e:
             print(f"  ✗ Error: {e}")
-            results.append({"path": s3_path, "type": table_type, "error": str(e)})
+            results.append({"path": path, "type": table_type, "error": str(e)})
 
     # Print summary
     print(f"\n{'='*80}")
@@ -90,9 +83,7 @@ def monitor_tables(tables: List[Tuple[str, str]], aws_region: str = "us-west-2")
             health_emoji = (
                 "🟢"
                 if r["health_score"] > 0.8
-                else "🟡"
-                if r["health_score"] > 0.6
-                else "🔴"
+                else "🟡" if r["health_score"] > 0.6 else "🔴"
             )
             path_short = r["path"][-35:] if len(r["path"]) > 35 else r["path"]
             print(
@@ -152,14 +143,14 @@ if __name__ == "__main__":
     # Example configuration
     # Modify this list with your actual table paths
     tables_to_monitor = [
-        ("s3://my-bucket/warehouse/sales_data", "delta"),
-        ("s3://my-bucket/warehouse/user_events", "iceberg"),
-        ("s3://my-bucket/warehouse/products", "delta"),
-        ("s3://my-bucket/warehouse/inventory", "iceberg"),
+        ("abfss://fs@account.dfs.core.windows.net/warehouse/sales_data", "delta"),
+        ("abfss://fs@account.dfs.core.windows.net/warehouse/user_events", "delta"),
+        ("abfss://fs@account.dfs.core.windows.net/warehouse/products", "delta"),
+        ("abfss://fs@account.dfs.core.windows.net/warehouse/inventory", "delta"),
     ]
 
-    # Run monitoring
-    results = monitor_tables(tables_to_monitor, aws_region="us-west-2")
+    # Run monitoring (optional: provide UAMI client id as second argument)
+    results = monitor_tables(tables_to_monitor)
 
     # Optional: Save results to a file
     # import json

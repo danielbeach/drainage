@@ -1,14 +1,13 @@
 # Makefile for drainage project
 
-.PHONY: help install build test test-rust test-python test-integration lint format clean release
+.PHONY: help install build test test-python test-integration lint format clean release
 
 # Default target
 help:
 	@echo "Available targets:"
 	@echo "  install       - Install dependencies and build the project"
-	@echo "  build         - Build the Rust library and Python extension"
+	@echo "  build         - Build the Python extension"
 	@echo "  test          - Run all tests"
-	@echo "  test-rust     - Run Rust unit tests"
 	@echo "  test-python   - Run Python tests"
 	@echo "  test-integration - Run integration tests"
 	@echo "  lint          - Run linting checks"
@@ -20,22 +19,17 @@ help:
 # Install dependencies
 install:
 	@echo "Installing dependencies..."
-	pip install --upgrade pip
-	pip install maturin pytest pytest-mock pytest-cov flake8 black safety bandit
-	cargo install cargo-audit || echo "cargo-audit not available"
+	python -m pip install --upgrade pip
+	python -m pip install -r requirements.txt
 
 # Build the project
 build:
 	@echo "Building drainage..."
-	maturin develop --release
+	python -m pip install --upgrade pip
+	pip install -e .
 
 # Run all tests
-test: test-rust test-python test-integration
-
-# Run Rust tests
-test-rust:
-	@echo "Running Rust tests..."
-	cargo test --verbose
+test: test-python test-integration
 
 # Run Python tests
 test-python:
@@ -50,21 +44,17 @@ test-integration:
 # Run linting
 lint:
 	@echo "Running linting checks..."
-	cargo clippy -- -D warnings
-	cargo fmt -- --check
 	flake8 tests/ examples/ --max-line-length=100
 	black --check tests/ examples/
 
 # Format code
 format:
 	@echo "Formatting code..."
-	cargo fmt
 	black tests/ examples/
 
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	cargo clean
 	rm -rf target/
 	rm -rf build/
 	rm -rf dist/
@@ -79,7 +69,8 @@ clean:
 # Build release version
 release:
 	@echo "Building release version..."
-	maturin build --release
+	python -m pip install --upgrade build
+	python -m build
 
 # Generate documentation
 docs:
@@ -90,7 +81,6 @@ docs:
 # Security checks
 security:
 	@echo "Running security checks..."
-	cargo audit
 	safety check
 	bandit -r tests/ examples/ -f json -o bandit-report.json || true
 
@@ -114,7 +104,7 @@ dev: install build test
 	@echo "Development environment ready"
 
 # Quick test (just unit tests)
-quick-test: test-rust test-python
+quick-test: test-python
 	@echo "Quick tests completed"
 
 # Test specific module
@@ -171,11 +161,11 @@ remove-hooks:
 # Show project info
 info:
 	@echo "Project: drainage"
-	@echo "Language: Rust + Python"
+	@echo "Language: Python"
 	@echo "Build tool: maturin"
-	@echo "Test framework: pytest + cargo test"
-	@echo "Linting: clippy + flake8 + black"
-	@echo "Security: cargo-audit + safety + bandit"
+	@echo "Test framework: pytest"
+	@echo "Linting: flake8 + black"
+	@echo "Security: safety + bandit"
 
 # Show help for specific target
 help-%:

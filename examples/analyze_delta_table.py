@@ -3,37 +3,33 @@
 Example script for analyzing a Delta Lake table health.
 
 This script demonstrates how to use the drainage library to analyze
-a Delta Lake table stored in S3 and get comprehensive health metrics.
+a Delta Lake table stored on ADLS and get comprehensive health metrics.
 """
 
 import sys
 import drainage
 
 
-def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
+def analyze_delta_table(path: str, client_id: str = None):
     """
     Analyze a Delta Lake table and print comprehensive health report.
 
     Args:
-        s3_path: S3 path to the Delta table (e.g., s3://bucket/path/to/table)
-        aws_region: AWS region (defaults to us-west-2)
+        path: ADLS path to the Delta table (e.g., abfss://<filesystem>@<account>.dfs.core.windows.net/<prefix>)
+        client_id: Optional user-assigned managed identity client id (UAMI)
     """
 
     print(f"\n{'='*70}")
     print("Analyzing Delta Lake Table")
     print(f"{'='*70}\n")
-    print(f"📍 Location: {s3_path}")
-    print(f"🌎 Region: {aws_region}")
+    print(f"📍 Location: {path}")
+    if client_id:
+        print(f"🔐 Using UAMI client id: {client_id}")
     print("\nAnalyzing... This may take a few moments...\n")
 
     try:
         # Run the analysis
-        report = drainage.analyze_delta_lake(
-            s3_path=s3_path,
-            aws_region=aws_region
-            # aws_access_key_id=None,  # Optional - uses default credentials
-            # aws_secret_access_key=None,  # Optional - uses default credentials
-        )
+        report = drainage.analyze_delta_lake(path, client_id)
 
         # Print header
         print(f"{'='*70}")
@@ -44,9 +40,7 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
         health_emoji = (
             "🟢"
             if report.health_score > 0.8
-            else "🟡"
-            if report.health_score > 0.6
-            else "🔴"
+            else "🟡" if report.health_score > 0.6 else "🔴"
         )
         print(f"{health_emoji} Overall Health Score: {report.health_score:.1%}")
         print(f"📅 Analysis Timestamp: {report.analysis_timestamp}\n")
@@ -140,7 +134,7 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
                 wasted_mb = report.metrics.unreferenced_size_bytes / (1024**2)
                 print(f"  Wasted: {wasted_mb:.2f} MB")
 
-            print("\n  These files exist in S3 but are not referenced in the")
+            print("\n  These files exist in storage but are not referenced in the")
             print("  Delta transaction log. Consider cleaning them up.\n")
 
         # Recommendations
@@ -165,12 +159,14 @@ def analyze_delta_table(s3_path: str, aws_region: str = "us-west-2"):
 if __name__ == "__main__":
     # Example usage
     if len(sys.argv) < 2:
-        print("Usage: python analyze_delta_table.py <s3_path> [aws_region]")
+        print("Usage: python analyze_delta_table.py <adls_path> [uami_client_id]")
         print("\nExample:")
-        print("  python analyze_delta_table.py s3://my-bucket/my-delta-table us-west-2")
+        print(
+            "  python analyze_delta_table.py abfss://fs@account.dfs.core.windows.net/my-delta-table"
+        )
         sys.exit(1)
 
-    s3_path = sys.argv[1]
-    aws_region = sys.argv[2] if len(sys.argv) > 2 else "us-west-2"
+    path = sys.argv[1]
+    client_id = sys.argv[2] if len(sys.argv) > 2 else None
 
-    analyze_delta_table(s3_path, aws_region)
+    analyze_delta_table(path, client_id)

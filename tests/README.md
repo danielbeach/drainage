@@ -21,9 +21,6 @@ Make sure you have the following installed:
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
-
-# Install Rust dependencies (if not already installed)
-cargo install maturin
 ```
 
 ### Quick Start
@@ -39,11 +36,6 @@ python -m pytest tests/ -v
 ### Individual Test Suites
 
 ```bash
-# Run only Rust tests
-make test-rust
-# or
-cargo test
-
 # Run only Python tests
 make test-python
 # or
@@ -110,9 +102,8 @@ The `conftest.py` file provides common fixtures for testing:
 - `drainage_module`: The drainage module
 - `mock_health_report`: Mock health report for testing
 - `mock_delta_lake_objects`: Mock Delta Lake objects
-- `mock_iceberg_objects`: Mock Iceberg objects
-- `valid_s3_paths`: Valid S3 paths for testing
-- `invalid_s3_paths`: Invalid S3 paths for testing
+- `valid_adls_paths`: Valid ADLS paths for testing
+- `invalid_adls_paths`: Invalid ADLS paths for testing
 - And many more...
 
 ## Test Coverage
@@ -145,18 +136,12 @@ def test_analyze_delta_lake_parameters():
     with patch('drainage.analyze_delta_lake') as mock_analyze:
         mock_report = MagicMock()
         mock_analyze.return_value = mock_report
-        
+
         result = drainage.analyze_delta_lake(
-            s3_path="s3://test-bucket/test-table/",
-            aws_region="us-west-2"
+            "abfss://testfs@account.dfs.core.windows.net/test-table/",
         )
-        
-        mock_analyze.assert_called_once_with(
-            s3_path="s3://test-bucket/test-table/",
-            aws_access_key_id=None,
-            aws_secret_access_key=None,
-            aws_region="us-west-2"
-        )
+
+        mock_analyze.assert_called_once()
         assert result == mock_report
 ```
 
@@ -167,7 +152,7 @@ Use the provided fixtures for common mocks:
 ```python
 def test_with_mock_report(mock_health_report):
     """Test with mock health report."""
-    assert mock_health_report.table_path == "s3://test-bucket/test-table/"
+    assert mock_health_report.table_path == "abfss://testfs@account.dfs.core.windows.net/test-table/"
     assert mock_health_report.health_score == 0.85
 ```
 
@@ -193,13 +178,12 @@ Tests are automatically run on:
 
 The CI pipeline includes:
 
-1. **Rust Tests**: Unit tests for Rust code
-2. **Python Tests**: Unit tests for Python bindings
-3. **Integration Tests**: End-to-end workflow tests
-4. **Linting**: Code quality checks
-5. **Security**: Security vulnerability scans
-6. **Performance**: Performance benchmarks
-7. **Documentation**: Documentation generation
+1. **Python Tests**: Unit and integration tests for the Python package
+2. **Integration Tests**: End-to-end workflow tests
+3. **Linting**: Code quality checks
+4. **Security**: Security vulnerability scans
+5. **Performance**: Performance benchmarks
+6. **Documentation**: Documentation generation
 
 ## Debugging Tests
 
@@ -250,7 +234,7 @@ Test data is provided through fixtures in `conftest.py`. For custom test data:
 ## Best Practices
 
 1. **Test Isolation**: Each test should be independent
-2. **Mock External Dependencies**: Don't make real AWS calls in tests
+2. **Mock External Dependencies**: Don't make real cloud service calls in tests
 3. **Clear Test Names**: Test names should describe what they test
 4. **One Assertion Per Test**: Keep tests focused on one behavior
 5. **Use Fixtures**: Reuse common test data through fixtures

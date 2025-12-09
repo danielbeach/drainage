@@ -34,17 +34,12 @@ class TestDrainageModule(unittest.TestCase):
         """Test that the drainage module can be imported."""
         self.assertIsNotNone(drainage)
         self.assertTrue(hasattr(drainage, "analyze_delta_lake"))
-        self.assertTrue(hasattr(drainage, "analyze_iceberg"))
         self.assertTrue(hasattr(drainage, "analyze_table"))
         self.assertTrue(hasattr(drainage, "print_health_report"))
 
     def test_analyze_delta_lake_function_exists(self):
         """Test that analyze_delta_lake function exists and is callable."""
         self.assertTrue(callable(drainage.analyze_delta_lake))
-
-    def test_analyze_iceberg_function_exists(self):
-        """Test that analyze_iceberg function exists and is callable."""
-        self.assertTrue(callable(drainage.analyze_iceberg))
 
     def test_analyze_table_function_exists(self):
         """Test that analyze_table function exists and is callable."""
@@ -60,21 +55,16 @@ class TestDrainageModule(unittest.TestCase):
         # Mock the return value
         mock_report = MagicMock()
         mock_analyze.return_value = mock_report
-
-        # Test with all parameters
+        # Test with path and client_id parameters
         result = drainage.analyze_delta_lake(
-            s3_path="s3://test-bucket/test-table/",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
+            "abfss://fs@account.dfs.core.windows.net/test-table/",
+            "test-uami-client-id",
         )
 
         # Verify the function was called with correct parameters
         mock_analyze.assert_called_once_with(
-            s3_path="s3://test-bucket/test-table/",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
+            "abfss://fs@account.dfs.core.windows.net/test-table/",
+            "test-uami-client-id",
         )
         self.assertEqual(result, mock_report)
 
@@ -86,34 +76,13 @@ class TestDrainageModule(unittest.TestCase):
         mock_analyze.return_value = mock_report
 
         # Test with only required parameters
-        result = drainage.analyze_delta_lake("s3://test-bucket/test-table/")
-
-        # Verify the function was called with correct parameters
-        # The mock intercepts the call before default values are applied
-        mock_analyze.assert_called_once_with("s3://test-bucket/test-table/")
-        self.assertEqual(result, mock_report)
-
-    @patch("drainage.analyze_iceberg")
-    def test_analyze_iceberg_parameters(self, mock_analyze):
-        """Test analyze_iceberg function parameters."""
-        # Mock the return value
-        mock_report = MagicMock()
-        mock_analyze.return_value = mock_report
-
-        # Test with all parameters
-        result = drainage.analyze_iceberg(
-            s3_path="s3://test-bucket/test-table/",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
+        result = drainage.analyze_delta_lake(
+            "abfss://fs@account.dfs.core.windows.net/test-table/"
         )
 
         # Verify the function was called with correct parameters
         mock_analyze.assert_called_once_with(
-            s3_path="s3://test-bucket/test-table/",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
+            "abfss://fs@account.dfs.core.windows.net/test-table/"
         )
         self.assertEqual(result, mock_report)
 
@@ -124,22 +93,18 @@ class TestDrainageModule(unittest.TestCase):
         mock_report = MagicMock()
         mock_analyze.return_value = mock_report
 
-        # Test with all parameters
+        # Test with all parameters (path, table_type, client_id)
         result = drainage.analyze_table(
-            s3_path="s3://test-bucket/test-table/",
+            "abfss://fs@account.dfs.core.windows.net/test-table/",
             table_type="delta",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
+            client_id="test-uami-client-id",
         )
 
         # Verify the function was called with correct parameters
         mock_analyze.assert_called_once_with(
-            s3_path="s3://test-bucket/test-table/",
+            "abfss://fs@account.dfs.core.windows.net/test-table/",
             table_type="delta",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
+            client_id="test-uami-client-id",
         )
         self.assertEqual(result, mock_report)
 
@@ -152,12 +117,12 @@ class TestDrainageModule(unittest.TestCase):
 
         # Test with auto-detection (no table_type specified)
         result = drainage.analyze_table(
-            "s3://test-bucket/test-table/", None, None, None, "us-west-2"
+            "abfss://fs@account.dfs.core.windows.net/test-table/"
         )
 
         # Verify the function was called with correct parameters
         mock_analyze.assert_called_once_with(
-            "s3://test-bucket/test-table/", None, None, None, "us-west-2"
+            "abfss://fs@account.dfs.core.windows.net/test-table/"
         )
         self.assertEqual(result, mock_report)
 
@@ -165,7 +130,7 @@ class TestDrainageModule(unittest.TestCase):
         """Test print_health_report function parameters."""
         # Create a mock health report
         mock_report = MagicMock()
-        mock_report.table_path = "s3://test-bucket/test-table/"
+        mock_report.table_path = "abfss://fs@account.dfs.core.windows.net/test-table/"
         mock_report.table_type = "delta"
         mock_report.analysis_timestamp = "2023-01-01T00:00:00Z"
         mock_report.health_score = 0.85
@@ -212,53 +177,30 @@ class TestDrainageModule(unittest.TestCase):
         self.assertTrue(hasattr(drainage, "print_health_report"))
         self.assertTrue(callable(drainage.print_health_report))
 
-    def test_s3_path_validation(self):
-        """Test S3 path validation."""
+    def test_adls_path_validation(self):
+        """Test ADLS path validation."""
         valid_paths = [
-            "s3://bucket/table/",
-            "s3://my-bucket/my-table/",
-            "s3://bucket.with.dots/table/",
-            "s3://bucket/path/to/table/",
+            "abfss://fs@account.dfs.core.windows.net/table/",
+            "abfss://myfs@myaccount.dfs.core.windows.net/my-table/",
+            "https://account.dfs.core.windows.net/fs/path/to/table/",
         ]
 
         for path in valid_paths:
-            self.assertTrue(path.startswith("s3://"), f"Invalid S3 path: {path}")
             self.assertTrue(
-                "/" in path, f"S3 path should contain path separator: {path}"
+                path.startswith("abfss://") or path.startswith("https://"),
+                f"Invalid ADLS path: {path}",
+            )
+            self.assertTrue(
+                "/" in path, f"ADLS path should contain path separator: {path}"
             )
 
-    def test_aws_region_validation(self):
-        """Test AWS region validation."""
-        valid_regions = [
-            "us-east-1",
-            "us-west-2",
-            "eu-west-1",
-            "ap-southeast-1",
-            "ca-central-1",
-        ]
+    # AWS-specific region/credential tests removed for ADLS-only project
 
-        for region in valid_regions:
-            self.assertIsInstance(region, str)
-            self.assertTrue(len(region) > 0, f"Region should not be empty: {region}")
-            self.assertIn("-", region, f"Region should contain dash: {region}")
-
-    def test_aws_credentials_validation(self):
-        """Test AWS credentials validation."""
-        valid_access_key = "AKIAIOSFODNN7EXAMPLE"
-        valid_secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-
-        self.assertTrue(
-            valid_access_key.startswith("AKIA"), "Access key should start with AKIA"
-        )
-        self.assertTrue(
-            len(valid_secret_key) >= 20, "Secret key should be at least 20 characters"
-        )
-        self.assertNotIn(" ", valid_access_key, "Access key should not contain spaces")
-        self.assertNotIn(" ", valid_secret_key, "Secret key should not contain spaces")
+    # AWS credentials tests removed for ADLS-only project
 
     def test_table_type_validation(self):
-        """Test table type validation."""
-        valid_table_types = ["delta", "iceberg", "Delta", "Iceberg", "DELTA", "ICEBERG"]
+        """Test table type validation (Delta-only)."""
+        valid_table_types = ["delta", "Delta", "DELTA"]
 
         for table_type in valid_table_types:
             self.assertIsInstance(table_type, str)
@@ -429,23 +371,23 @@ class TestDrainageIntegration(unittest.TestCase):
         """Test complete analysis workflow."""
         # Mock the return value
         mock_report = MagicMock()
-        mock_report.table_path = "s3://test-bucket/test-table/"
+        mock_report.table_path = "abfss://fs@account.dfs.core.windows.net/test-table/"
         mock_report.table_type = "delta"
         mock_report.health_score = 0.85
         mock_analyze.return_value = mock_report
 
         # Test the complete workflow
-        s3_path = "s3://test-bucket/test-table/"
-        aws_region = "us-west-2"
+
+        path = "abfss://fs@account.dfs.core.windows.net/test-table/"
 
         # Analyze the table
-        report = drainage.analyze_table(s3_path, None, None, None, aws_region)
+        report = drainage.analyze_table(path)
 
         # Verify the analysis was performed
-        mock_analyze.assert_called_once_with(s3_path, None, None, None, aws_region)
+        mock_analyze.assert_called_once_with(path)
 
-        # Verify the report structure
-        self.assertEqual(report.table_path, "s3://test-bucket/test-table/")
+        # Verify the report structure (ADLS path expected)
+        self.assertEqual(report.table_path, path)
         self.assertEqual(report.table_type, "delta")
         self.assertEqual(report.health_score, 0.85)
 
@@ -454,76 +396,50 @@ class TestDrainageIntegration(unittest.TestCase):
         """Test Delta Lake analysis workflow."""
         # Mock the return value
         mock_report = MagicMock()
-        mock_report.table_path = "s3://test-bucket/delta-table/"
+        mock_report.table_path = "abfss://fs@account.dfs.core.windows.net/delta-table/"
         mock_report.table_type = "delta"
         mock_report.health_score = 0.90
         mock_analyze.return_value = mock_report
 
         # Test Delta Lake analysis
-        s3_path = "s3://test-bucket/delta-table/"
-        aws_region = "us-west-2"
+
+        path = "abfss://fs@account.dfs.core.windows.net/delta-table/"
 
         # Analyze the Delta Lake table
-        report = drainage.analyze_delta_lake(s3_path, None, None, aws_region)
+        report = drainage.analyze_delta_lake(path)
 
         # Verify the analysis was performed
-        mock_analyze.assert_called_once_with(s3_path, None, None, aws_region)
+        mock_analyze.assert_called_once_with(path)
 
-        # Verify the report structure
-        self.assertEqual(report.table_path, "s3://test-bucket/delta-table/")
+        # Verify the report structure (ADLS path expected)
+        self.assertEqual(report.table_path, path)
         self.assertEqual(report.table_type, "delta")
         self.assertEqual(report.health_score, 0.90)
 
-    @patch("drainage.analyze_iceberg")
-    def test_iceberg_analysis_workflow(self, mock_analyze):
-        """Test Iceberg analysis workflow."""
-        # Mock the return value
-        mock_report = MagicMock()
-        mock_report.table_path = "s3://test-bucket/iceberg-table/"
-        mock_report.table_type = "iceberg"
-        mock_report.health_score = 0.88
-        mock_analyze.return_value = mock_report
-
-        # Test Iceberg analysis
-        s3_path = "s3://test-bucket/iceberg-table/"
-        aws_region = "us-west-2"
-
-        # Analyze the Iceberg table
-        report = drainage.analyze_iceberg(s3_path, None, None, aws_region)
-
-        # Verify the analysis was performed
-        mock_analyze.assert_called_once_with(s3_path, None, None, aws_region)
-
-        # Verify the report structure
-        self.assertEqual(report.table_path, "s3://test-bucket/iceberg-table/")
-        self.assertEqual(report.table_type, "iceberg")
-        self.assertEqual(report.health_score, 0.88)
-
-    def test_error_handling_invalid_s3_path(self):
-        """Test error handling for invalid S3 paths."""
+    def test_error_handling_invalid_adls_path(self):
+        """Test error handling for invalid ADLS paths."""
         invalid_paths = [
             "not-a-url",
-            "https://bucket/table/",
             "ftp://bucket/table/",
             "",
-            "s3://",
-            "s3:///",
+            "abfss://",
+            "abfss:///",
         ]
 
         for invalid_path in invalid_paths:
             if invalid_path == "":
                 continue  # Skip empty string test
-            # This would normally raise an exception
-            # We're just testing that the validation logic exists
-            # Check if it's a valid S3 path format
-            is_valid_s3 = (
-                invalid_path.startswith("s3://")
-                and len(invalid_path) > 6
-                and "/" in invalid_path[6:]  # More than just "s3://"
-                and len(invalid_path.split("/"))  # Has "/" after "s3://"
-                >= 4  # Has bucket and path components
+            is_valid_adls = (
+                (
+                    invalid_path.startswith("abfss://")
+                    or invalid_path.startswith("https://")
+                )
+                and len(invalid_path) > 10
+                and "/" in invalid_path
             )
-            self.assertFalse(is_valid_s3, f"Should be invalid S3 path: {invalid_path}")
+            self.assertFalse(
+                is_valid_adls, f"Should be invalid ADLS path: {invalid_path}"
+            )
 
     def test_error_handling_invalid_table_type(self):
         """Test error handling for invalid table types."""
@@ -536,7 +452,7 @@ class TestDrainageIntegration(unittest.TestCase):
             # We're just testing that the validation logic exists
             self.assertNotIn(
                 invalid_type.lower(),
-                ["delta", "iceberg"],
+                ["delta"],
                 f"Should be invalid table type: {invalid_type}",
             )
 
