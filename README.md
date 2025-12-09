@@ -130,7 +130,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 #### Metadata Health
 - `metadata_file_count`: Number of transaction logs/manifest files
 - `metadata_total_size_bytes`: Combined size of all metadata files
-- `avg_metadata_file_size`: Average size of metadata files
+- `avg_metadata_file_size_bytes`: Average size of metadata files
 - `metadata_growth_rate`: Estimated metadata growth rate
 - `manifest_file_count`: Number of manifest files (Iceberg not supported in this release)
 

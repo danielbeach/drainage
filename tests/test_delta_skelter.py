@@ -153,7 +153,7 @@ class TestDeltaSkelterModule(unittest.TestCase):
         mock_report.metrics.metadata_health = MagicMock()
         mock_report.metrics.metadata_health.metadata_file_count = 5
         mock_report.metrics.metadata_health.metadata_total_size_bytes = 1024 * 1024
-        mock_report.metrics.metadata_health.avg_metadata_file_size = 1024 * 200
+        mock_report.metrics.metadata_health.avg_metadata_file_size_bytes = 1024 * 200
         mock_report.metrics.metadata_health.manifest_file_count = 0
         mock_report.metrics.snapshot_health = MagicMock()
         mock_report.metrics.snapshot_health.snapshot_count = 5
@@ -317,7 +317,7 @@ class TestDeltaSkelterModule(unittest.TestCase):
         expected_attributes = [
             "metadata_file_count",
             "metadata_total_size_bytes",
-            "avg_metadata_file_size",
+            "avg_metadata_file_size_bytes",
             "metadata_growth_rate",
             "manifest_file_count",
         ]

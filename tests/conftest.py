@@ -67,7 +67,7 @@ def mock_health_report():
     mock_report.metrics.metadata_health = MagicMock()
     mock_report.metrics.metadata_health.metadata_file_count = 5
     mock_report.metrics.metadata_health.metadata_total_size_bytes = 1024 * 1024
-    mock_report.metrics.metadata_health.avg_metadata_file_size = 1024 * 200
+    mock_report.metrics.metadata_health.avg_metadata_file_size_bytes = 1024 * 200
     mock_report.metrics.metadata_health.metadata_growth_rate = 0.0
     mock_report.metrics.metadata_health.manifest_file_count = 0
 
@@ -296,7 +296,7 @@ def mock_metadata_health():
     mock_metadata = MagicMock()
     mock_metadata.metadata_file_count = 5
     mock_metadata.metadata_total_size_bytes = 1024 * 1024
-    mock_metadata.avg_metadata_file_size = 1024 * 200
+    mock_metadata.avg_metadata_file_size_bytes = 1024 * 200
     mock_metadata.metadata_growth_rate = 0.0
     mock_metadata.manifest_file_count = 0
     return mock_metadata

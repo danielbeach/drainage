@@ -131,7 +131,7 @@ class DeltaLakeAnalyzer:
             # MetadataHealth is part of HealthMetrics; ensure it's populated
             metrics.metadata_health.metadata_file_count = metadata_count
             metrics.metadata_health.metadata_total_size_bytes = metadata_total
-            metrics.metadata_health.avg_metadata_file_size = avg_metadata_size
+            metrics.metadata_health.avg_metadata_file_size_bytes = avg_metadata_size
             metrics.metadata_health.manifest_file_count = manifest_file_count
             metrics.metadata_health.checkpoint_count = checkpoint_count
             metrics.metadata_health.checkpoint_total_size_bytes = checkpoint_total_size
@@ -142,7 +142,7 @@ class DeltaLakeAnalyzer:
             mh = type("MH", (), {})()
             mh.metadata_file_count = metadata_count
             mh.metadata_total_size_bytes = metadata_total
-            mh.avg_metadata_file_size = avg_metadata_size
+            mh.avg_metadata_file_size_bytes = avg_metadata_size
             mh.manifest_file_count = manifest_file_count
             mh.checkpoint_count = checkpoint_count
             mh.checkpoint_total_size_bytes = checkpoint_total_size

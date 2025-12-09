@@ -98,10 +98,14 @@ def _report_to_dict(report: delta_skelter.HealthReport) -> dict:
 
     def convert(obj):
         if isinstance(obj, dict):
-            return {
-                k: (round(v / (1024 * 1024), 2) if k.endswith("_bytes") and isinstance(v, (int, float)) else convert(v))
-                for k, v in obj.items()
-            }
+            converted = {}
+            for k, v in obj.items():
+                # Rename *_bytes fields to *_mb and convert units, always rounding to 2 decimals
+                if k.endswith("_bytes") and isinstance(v, (int, float)):
+                    converted[k.replace("_bytes", "_mb")] = round(v / (1024 * 1024), 2)
+                    continue
+                converted[k] = convert(v)
+            return converted
         if isinstance(obj, list):
             return [convert(x) for x in obj]
         return obj

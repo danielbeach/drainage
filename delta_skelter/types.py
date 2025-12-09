@@ -49,7 +49,7 @@ class DataSkewMetrics:
 class MetadataHealth:
     metadata_file_count: int = 0
     metadata_total_size_bytes: int = 0
-    avg_metadata_file_size: float = 0.0
+    avg_metadata_file_size_bytes: float = 0.0
     manifest_file_count: int = 0
     checkpoint_count: int = 0
     checkpoint_total_size_bytes: int = 0

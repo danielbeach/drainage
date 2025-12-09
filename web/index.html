@@ -249,12 +249,32 @@
     const totalSizeEl = document.getElementById('totalSize');
     const metaFilesEl = document.getElementById('metaFiles');
 
-    const fmtMB = (n) => n === undefined ? '–' : Number(n).toFixed(2);
+    const fmtMB = (n) => n === undefined || n === null || Number.isNaN(Number(n)) ? '–' : Number(n).toFixed(2);
 
-    const applyReportToUI = (data) => {
+    const convertBytesFields = (obj) => {
+      if (Array.isArray(obj)) {
+        return obj.map(convertBytesFields);
+      }
+      if (obj && typeof obj === 'object') {
+        const out = {};
+        Object.entries(obj).forEach(([k, v]) => {
+          if (k.endsWith('_bytes') && (typeof v === 'number')) {
+            const mb = Number(v / (1024 * 1024));
+            out[k.replace('_bytes', '_mb')] = Number(mb.toFixed(2));
+          } else {
+            out[k] = convertBytesFields(v);
+          }
+        });
+        return out;
+      }
+      return obj;
+    };
+
+    const applyReportToUI = (raw) => {
+      const data = convertBytesFields(raw);
       healthEl.textContent = data.health_score !== undefined ? (data.health_score * 100).toFixed(1) + '%' : '–';
       totalFilesEl.textContent = data.metrics?.total_files ?? '–';
-      totalSizeEl.textContent = fmtMB(data.metrics?.total_size_bytes ?? 0);
+      totalSizeEl.textContent = fmtMB(data.metrics?.total_size_mb ?? data.metrics?.total_size ?? 0);
       metaFilesEl.textContent = data.metrics?.metadata_health?.metadata_file_count ?? '–';
       logEl.textContent = JSON.stringify(data, null, 2);
       logEl.classList.remove('error');
