@@ -56,11 +56,11 @@
     .logo {
       width: 44px;
       height: 44px;
-      padding: 8px;
+      padding: 0;
       border-radius: 12px;
-      background: linear-gradient(135deg, rgba(37,99,235,0.18), rgba(34,211,238,0.12));
-      border: 1px solid rgba(37,99,235,0.22);
-      box-shadow: 0 10px 24px rgba(37,99,235,0.18);
+      background: transparent;
+      border: none;
+      box-shadow: none;
     }
     .logo svg {
       width: 100%;
@@ -72,13 +72,34 @@
       font-weight: 700;
       letter-spacing: 0.2px;
     }
+    .subtitle {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.2px;
+    }
+    .title-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      line-height: 1.1;
+    }
     .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       padding: 6px 12px;
       border-radius: 999px;
       background: rgba(37,99,235,0.12);
       color: var(--accent);
       font-weight: 600;
       font-size: 13px;
+    }
+    .pill svg {
+      width: 16px;
+      height: 16px;
+      display: block;
     }
     form {
       display: grid;
@@ -115,6 +136,19 @@
     button:hover {
       transform: translateY(-1px);
       box-shadow: 0 12px 30px rgba(37,99,235,0.25);
+    }
+    .demo-btn {
+      background: #f8fafc;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      box-shadow: none;
+      transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+    }
+    .demo-btn:hover {
+      background: #eef2ff;
+      color: var(--accent);
+      transform: translateY(-1px);
     }
     .grid {
       display: grid;
@@ -162,9 +196,17 @@
             <path d="M14 46 C22 42, 30 44, 38 40 C46 36, 52 38, 56 42" stroke="#0ea5e9" stroke-width="4" fill="none" stroke-linecap="round"/>
           </svg>
         </div>
-        <div class="title">Delta-Skelter Delta Lake Health Checker</div>
+        <div class="title-stack">
+          <div class="title">Delta-Skelter</div>
+          <div class="subtitle">Delta Lake Health Checker</div>
+        </div>
       </div>
-      <div class="pill">API-backed • ADLS</div>
+      <div class="pill">API-backed •
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 16.5c0-2.5 1.9-4.6 4.3-4.9C8.8 8.3 10.9 6 13.5 6 16.5 6 19 8.6 19 11.7c1.7.3 3 1.8 3 3.6 0 2-1.6 3.7-3.6 3.7H7.6C5.6 19 4 17.4 4 15.5Z" fill="#2563eb" opacity="0.22"/>
+          <path d="M9.5 10.5 12.5 7l3 3.5-2.3 2.6L17 17h-4l-1.7-1.9-1.7 1.9H5l4.2-4.4-1.9-2.1Z" fill="#2563eb"/>
+        </svg>
+        ADLS</div>
     </header>
     <form id="form">
       <div>
@@ -177,12 +219,8 @@
           <input id="clientId" name="clientId" placeholder="UAMI client id" />
         </div>
         <div>
-          <label>Metadata file count threshold (optional)</label>
-          <input id="metaCount" name="metaCount" type="number" min="1" placeholder="e.g. 100" />
-        </div>
-        <div>
-          <label>Metadata total size threshold bytes (optional)</label>
-          <input id="metaSize" name="metaSize" type="number" min="1" placeholder="e.g. 52428800" />
+          <label>Timeout (seconds, default 300)</label>
+          <input id="timeout" name="timeout" type="number" min="10" value="300" />
         </div>
       </div>
       <button type="submit">Analyze</button>
@@ -190,9 +228,9 @@
     <div style="margin-bottom:16px;">
       <div style="font-weight:600; margin-bottom:8px;">Demo scenarios (local data)</div>
       <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-        <button type="button" class="demo-btn" data-profile="very-well-housekept">Very well housekept</button>
-        <button type="button" class="demo-btn" data-profile="quite-well-housekept">Quite well housekept</button>
-        <button type="button" class="demo-btn" data-profile="extremely-poorly-housekept">Extremely poorly housekept</button>
+        <button type="button" class="demo-btn" data-profile="very-well-housekept">Awesome</button>
+        <button type="button" class="demo-btn" data-profile="quite-well-housekept">Passable</button>
+        <button type="button" class="demo-btn" data-profile="extremely-poorly-housekept">Miserable</button>
       </div>
     </div>
     <div class="grid">
@@ -211,7 +249,7 @@
     const totalSizeEl = document.getElementById('totalSize');
     const metaFilesEl = document.getElementById('metaFiles');
 
-    const fmtMB = (n) => n === undefined ? '–' : (n / (1024*1024)).toFixed(2);
+    const fmtMB = (n) => n === undefined ? '–' : Number(n).toFixed(2);
 
     const applyReportToUI = (data) => {
       healthEl.textContent = data.health_score !== undefined ? (data.health_score * 100).toFixed(1) + '%' : '–';
@@ -230,8 +268,7 @@
       const body = {
         path: document.getElementById('path').value.trim(),
         client_id: document.getElementById('clientId').value.trim() || undefined,
-        metadata_file_count_threshold: parseInt(document.getElementById('metaCount').value, 10) || undefined,
-        metadata_total_size_threshold: parseInt(document.getElementById('metaSize').value, 10) || undefined,
+        timeout_seconds: parseInt(document.getElementById('timeout').value, 10) || 300,
       };
 
       try {

@@ -51,6 +51,10 @@ class MetadataHealth:
     metadata_total_size_bytes: int = 0
     avg_metadata_file_size: float = 0.0
     manifest_file_count: int = 0
+    checkpoint_count: int = 0
+    checkpoint_total_size_bytes: int = 0
+    oldest_checkpoint_timestamp: Optional[str] = None
+    latest_checkpoint_timestamp: Optional[str] = None
 
 
 @dataclass

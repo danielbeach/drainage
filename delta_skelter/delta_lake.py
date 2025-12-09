@@ -113,9 +113,13 @@ class DeltaLakeAnalyzer:
         metadata_total = sum(m.size for m in metadata_files)
         avg_metadata_size = metadata_total / metadata_count if metadata_count > 0 else 0
         # Count checkpoint/parquet files inside the _delta_log (checkpoints are parquet)
-        manifest_file_count = sum(
-            1 for m in metadata_files if m.key.endswith(".parquet")
-        )
+        manifest_file_count = sum(1 for m in metadata_files if m.key.endswith(".parquet"))
+        checkpoint_files = [m for m in metadata_files if m.key.endswith(".parquet")]
+        checkpoint_count = len(checkpoint_files)
+        checkpoint_total_size = sum(m.size for m in checkpoint_files)
+        checkpoint_times = [getattr(m, "last_modified", None) for m in checkpoint_files if getattr(m, "last_modified", None)]
+        oldest_checkpoint_ts = min(checkpoint_times) if checkpoint_times else None
+        latest_checkpoint_ts = max(checkpoint_times) if checkpoint_times else None
 
         # Compute metrics
         metrics = HealthMetrics()
@@ -129,6 +133,10 @@ class DeltaLakeAnalyzer:
             metrics.metadata_health.metadata_total_size_bytes = metadata_total
             metrics.metadata_health.avg_metadata_file_size = avg_metadata_size
             metrics.metadata_health.manifest_file_count = manifest_file_count
+            metrics.metadata_health.checkpoint_count = checkpoint_count
+            metrics.metadata_health.checkpoint_total_size_bytes = checkpoint_total_size
+            metrics.metadata_health.oldest_checkpoint_timestamp = oldest_checkpoint_ts
+            metrics.metadata_health.latest_checkpoint_timestamp = latest_checkpoint_ts
         except Exception:
             # If metadata_health is None or missing, create and attach a simple object
             mh = type("MH", (), {})()
@@ -136,6 +144,10 @@ class DeltaLakeAnalyzer:
             mh.metadata_total_size_bytes = metadata_total
             mh.avg_metadata_file_size = avg_metadata_size
             mh.manifest_file_count = manifest_file_count
+            mh.checkpoint_count = checkpoint_count
+            mh.checkpoint_total_size_bytes = checkpoint_total_size
+            mh.oldest_checkpoint_timestamp = oldest_checkpoint_ts
+            mh.latest_checkpoint_timestamp = latest_checkpoint_ts
             metrics.metadata_health = mh
 
         # Simple heuristic: if many metadata files or large metadata size, recommend metadata cleanup
