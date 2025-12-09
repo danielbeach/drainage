@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Drainage Delta Health</title>
+  <title>Delta-Skelter Delta Lake Health Checker</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -47,6 +47,25 @@
       justify-content: space-between;
       gap: 16px;
       margin-bottom: 20px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 44px;
+      height: 44px;
+      padding: 8px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(37,99,235,0.18), rgba(34,211,238,0.12));
+      border: 1px solid rgba(37,99,235,0.22);
+      box-shadow: 0 10px 24px rgba(37,99,235,0.18);
+    }
+    .logo svg {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
     .title {
       font-size: 24px;
@@ -130,7 +149,21 @@
 <body>
   <div class="shell">
     <header>
-      <div class="title">Drainage Delta Health</div>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2563eb" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.9"/>
+              </linearGradient>
+            </defs>
+            <path d="M8 50 L32 10 L56 50 Z" fill="url(#grad)" opacity="0.92"/>
+            <path d="M14 46 C22 42, 30 44, 38 40 C46 36, 52 38, 56 42" stroke="#0ea5e9" stroke-width="4" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="title">Delta-Skelter Delta Lake Health Checker</div>
+      </div>
       <div class="pill">API-backed • ADLS</div>
     </header>
     <form id="form">
@@ -151,13 +184,17 @@
           <label>Metadata total size threshold bytes (optional)</label>
           <input id="metaSize" name="metaSize" type="number" min="1" placeholder="e.g. 52428800" />
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
-          <input id="demoMode" type="checkbox" style="width:auto;" />
-          <label for="demoMode">Run in demo mode (local mock data, no ADLS)</label>
-        </div>
       </div>
       <button type="submit">Analyze</button>
     </form>
+    <div style="margin-bottom:16px;">
+      <div style="font-weight:600; margin-bottom:8px;">Demo scenarios (local data)</div>
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <button type="button" class="demo-btn" data-profile="very-well-housekept">Very well housekept</button>
+        <button type="button" class="demo-btn" data-profile="quite-well-housekept">Quite well housekept</button>
+        <button type="button" class="demo-btn" data-profile="extremely-poorly-housekept">Extremely poorly housekept</button>
+      </div>
+    </div>
     <div class="grid">
       <div class="card"><h4>Health Score</h4><div class="value" id="healthScore">–</div></div>
       <div class="card"><h4>Total Files</h4><div class="value" id="totalFiles">–</div></div>
@@ -176,6 +213,16 @@
 
     const fmtMB = (n) => n === undefined ? '–' : (n / (1024*1024)).toFixed(2);
 
+    const applyReportToUI = (data) => {
+      healthEl.textContent = data.health_score !== undefined ? (data.health_score * 100).toFixed(1) + '%' : '–';
+      totalFilesEl.textContent = data.metrics?.total_files ?? '–';
+      totalSizeEl.textContent = fmtMB(data.metrics?.total_size_bytes ?? 0);
+      metaFilesEl.textContent = data.metrics?.metadata_health?.metadata_file_count ?? '–';
+      logEl.textContent = JSON.stringify(data, null, 2);
+      logEl.classList.remove('error');
+      logEl.classList.add('success');
+    };
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       logEl.textContent = 'Running analysis…';
@@ -185,7 +232,6 @@
         client_id: document.getElementById('clientId').value.trim() || undefined,
         metadata_file_count_threshold: parseInt(document.getElementById('metaCount').value, 10) || undefined,
         metadata_total_size_threshold: parseInt(document.getElementById('metaSize').value, 10) || undefined,
-        demo_mode: document.getElementById('demoMode').checked,
       };
 
       try {
@@ -199,17 +245,30 @@
           throw new Error(`API error ${res.status}: ${txt}`);
         }
         const data = await res.json();
-        healthEl.textContent = (data.health_score ?? 0).toFixed(2);
-        totalFilesEl.textContent = data.metrics?.total_files ?? '–';
-        totalSizeEl.textContent = fmtMB(data.metrics?.total_size_bytes ?? 0);
-        metaFilesEl.textContent = data.metrics?.metadata_health?.metadata_file_count ?? '–';
-        logEl.textContent = JSON.stringify(data, null, 2);
-        logEl.classList.remove('error');
-        logEl.classList.add('success');
+        applyReportToUI(data);
       } catch (err) {
         logEl.textContent = err.message;
         logEl.classList.add('error');
       }
+    });
+
+    document.querySelectorAll('.demo-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        logEl.textContent = 'Loading demo scenario…';
+        const profile = btn.dataset.profile;
+        try {
+          const res = await fetch(`/api/demo/${profile}`);
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`API error ${res.status}: ${txt}`);
+          }
+          const data = await res.json();
+          applyReportToUI(data);
+        } catch (err) {
+          logEl.textContent = err.message;
+          logEl.classList.add('error');
+        }
+      });
     });
   </script>
 </body>

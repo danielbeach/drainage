@@ -1,4 +1,4 @@
-import drainage
+import delta_skelter
 from types import SimpleNamespace
 import asyncio
 
@@ -49,10 +49,10 @@ def test_integration_large_metadata_triggers_recommendation(monkeypatch):
 
     # Patch the public ADLSClient used by the analyze API and provide objects via a class-level field
     FakeADLSClient._global_objects = all_objs
-    monkeypatch.setattr(drainage, "ADLSClient", FakeADLSClient)
+    monkeypatch.setattr(delta_skelter, "ADLSClient", FakeADLSClient)
 
     # Run analysis via public API (defaults should recommend cleanup)
-    report = drainage.analyze_delta_lake(
+    report = delta_skelter.analyze_delta_lake(
         "abfss://fs@account.dfs.core.windows.net/test-table/"
     )
 
@@ -76,10 +76,10 @@ def test_integration_threshold_override_suppresses_recommendation(monkeypatch):
     all_objs = data_files + metadata_json + checkpoints
 
     FakeADLSClient._global_objects = all_objs
-    monkeypatch.setattr(drainage, "ADLSClient", FakeADLSClient)
+    monkeypatch.setattr(delta_skelter, "ADLSClient", FakeADLSClient)
 
     # Provide higher thresholds so defaults won't trigger
-    report = drainage.analyze_delta_lake(
+    report = delta_skelter.analyze_delta_lake(
         "abfss://fs@account.dfs.core.windows.net/test-table/",
         metadata_file_count_threshold=200,
         metadata_total_size_threshold=100 * 1024 * 1024,

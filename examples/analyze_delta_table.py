@@ -2,12 +2,12 @@
 """
 Example script for analyzing a Delta Lake table health.
 
-This script demonstrates how to use the drainage library to analyze
+This script demonstrates how to use the delta_skelter library to analyze
 a Delta Lake table stored on ADLS and get comprehensive health metrics.
 """
 
 import sys
-import drainage
+import delta_skelter
 
 
 def analyze_delta_table(path: str, client_id: str = None):
@@ -29,7 +29,7 @@ def analyze_delta_table(path: str, client_id: str = None):
 
     try:
         # Run the analysis
-        report = drainage.analyze_delta_lake(path, client_id)
+        report = delta_skelter.analyze_delta_lake(path, client_id)
 
         # Print header
         print(f"{'='*70}")

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Test runner for the drainage library.
+Test runner for the delta_skelter library.
 
-This script provides a convenient way to run all tests for the drainage library
+This script provides a convenient way to run all tests for the delta_skelter library
 """
 
 import sys
@@ -65,18 +65,18 @@ def run_integration_tests():
     print("Running integration tests...")
     print("=" * 50)
 
-    # Check if drainage module is available
+    # Check if delta_skelter module is available
     try:
-        import drainage
+        import delta_skelter
 
-        print("✅ drainage module is available")
+        print("✅ delta_skelter module is available")
     except ImportError:
         print(
-            "❌ drainage module not available. Installing package in editable mode..."
+            "❌ delta_skelter module not available. Installing package in editable mode..."
         )
         result = run_command("python -m pip install -e .", capture_output=True)
         if result is None:
-            print("❌ Failed to install drainage package")
+            print("❌ Failed to install delta_skelter package")
             return False
 
     # Run integration tests
@@ -171,7 +171,7 @@ def run_formatting():
 
 def main():
     """Main test runner function."""
-    parser = argparse.ArgumentParser(description="Run tests for the drainage library")
+    parser = argparse.ArgumentParser(description="Run tests for the delta_skelter library")
     parser.add_argument("--python", action="store_true", help="Run only Python tests")
     parser.add_argument(
         "--integration", action="store_true", help="Run only integration tests"

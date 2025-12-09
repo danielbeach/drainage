@@ -1,16 +1,8 @@
-# Drainage 🌊
+# Delta-Skelter 🌊
 
-[![CI](https://github.com/danielbeach/drainage/workflows/CI/badge.svg)](https://github.com/danielbeach/drainage/actions)
-[![codecov](https://codecov.io/gh/danielbeach/drainage/branch/main/graph/badge.svg)](https://codecov.io/gh/danielbeach/drainage)
-[![PyPI version](https://badge.fury.io/py/drainage.svg)](https://badge.fury.io/py/drainage)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org)
+Heavily inspired by and initially forked from the drainage project, this is a python-only project that analyses the health of Delta Lake tables stored on Azure Data Lake Storage (ADLS).
 
-🌊  D R A I N A G E  🦀    
-Python Lake House Health Analyzer 
-Detect • Diagnose • Optimize • Flow 
-
-A Python library for analyzing the health of Delta Lake tables stored on Azure Data Lake Storage (ADLS). Drainage helps you understand and optimize your Delta Lake tables by identifying issues like unreferenced files, suboptimal partitioning, and inefficient file sizes.
-Drainage helps you understand and optimize your data lake by identifying issues like unreferenced files, suboptimal partitioning, and inefficient file sizes.
+Delta-Skelter helps you understand and optimize your data lake by identifying issues like unreferenced files, suboptimal partitioning, and inefficient file sizes.
 
 ## Features
 
@@ -36,12 +28,6 @@ Drainage helps you understand and optimize your data lake by identifying issues 
 
 ## Installation
 
-### As a Python Package
-
-```bash
-pip install drainage
-```
-
 ### From Source
 
 ```bash
@@ -58,13 +44,13 @@ pip install dist/*.whl
 ### Quick Analysis (Auto-Detection)
 
 ```python
-import drainage
+import delta_skelter
 
 # Analyze any table (Delta Lake on ADLS) with automatic detection
-report = drainage.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-table")
+report = delta_skelter.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-table")
 
 # Print a comprehensive health report
-drainage.print_health_report(report)
+delta_skelter.print_health_report(report)
 
 # Or access individual metrics
 print(f"Health Score: {report.health_score}")
@@ -75,10 +61,10 @@ print(f"Total Files: {report.metrics.total_files}")
 ### Analyzing a Delta Lake Table
 
 ```python
-import drainage
+import delta_skelter
 
 # Analyze a Delta Lake table on ADLS
-report = drainage.analyze_delta_lake("abfss://myfs@account.dfs.core.windows.net/my-delta-table")
+report = delta_skelter.analyze_delta_lake("abfss://myfs@account.dfs.core.windows.net/my-delta-table")
 
 print(f"Health Score: {report.health_score}")
 print(f"Total Files: {report.metrics.total_files}")
@@ -205,7 +191,7 @@ The health score ranges from 0.0 (poor health) to 1.0 (excellent health) and is 
 
 ### Recommendations
 
-Drainage automatically generates recommendations based on the analysis:
+Delta-Skelter automatically generates recommendations based on the analysis:
 
 - **Orphaned Files**: Suggests cleanup of unreferenced files
 - **Small Files**: Recommends compaction to improve query performance
@@ -228,7 +214,7 @@ Drainage automatically generates recommendations based on the analysis:
 ### Complete Analysis Script
 
 ```python
-import drainage
+import delta_skelter
 import json
 
 def print_health_report(report):
@@ -273,12 +259,12 @@ def print_health_report(report):
     return report
 
 # Using the built-in analyze_table function with auto-detection
-report = drainage.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-table")
-drainage.print_health_report(report)
+report = delta_skelter.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-table")
+delta_skelter.print_health_report(report)
 
 # Or specify the table type explicitly
-report = drainage.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-delta-table", table_type="delta")
-drainage.print_health_report(report)
+report = delta_skelter.analyze_table("abfss://myfs@account.dfs.core.windows.net/my-delta-table", table_type="delta")
+delta_skelter.print_health_report(report)
 ```
 
 ### Using Example Scripts
@@ -309,10 +295,30 @@ python examples/analyze_delta_table.py abfss://myfs@account.dfs.core.windows.net
 python examples/monitor_multiple_tables.py
 ```
 
+### Run the UI (demo scenarios available)
+
+1) Start the API/UI server from the repo root:
+
+```bash
+python -m uvicorn app:app --host 0.0.0.0 --port 8080
+# or: python app.py
+```
+
+2) Open the UI at `http://localhost:8080/ui`.
+
+3) For real analysis, enter an ADLS path (abfss/https) and submit.
+
+4) For local examples, use the **Demo scenarios** buttons:
+   - **Very well housekept**
+   - **Quite well housekept**
+   - **Extremely poorly housekept**
+
+Each button calls the demo API with a curated dataset—no ADLS access required.
+
 ### Monitoring Multiple Tables
 
 ```python
-import drainage
+import delta_skelter
 from datetime import datetime
 
 tables = [
@@ -325,7 +331,7 @@ results = []
 
 for path, table_type in tables:
   try:
-    report = drainage.analyze_table(path)
+    report = delta_skelter.analyze_table(path)
 
     results.append({
       "path": path,
@@ -475,7 +481,7 @@ Analysis Time: 2025-01-27T10:30:00Z
 
 ## Architecture
 
-Drainage is built with:
+Delta-Skelter is built with:
 
 - **Python Implementation**: Pure Python analyzer (Rust components removed)
 - **Azure ADLS SDK**: Native ADLS integration via `azure-identity` and `azure-storage-file-datalake`
@@ -504,7 +510,7 @@ python -m build
 
 ### Testing
 
-Drainage includes a comprehensive Python test suite, with automated CI/CD testing across multiple platforms and supported Python versions.
+Delta-Skelter includes a comprehensive Python test suite, with automated CI/CD testing across multiple platforms and supported Python versions.
 
 #### Quick Start
 
@@ -528,7 +534,7 @@ python -m pytest tests/ -v
 # Run with coverage
 make coverage
 # or
-python -m pytest tests/ --cov=drainage --cov-report=html
+python -m pytest tests/ --cov=delta_skelter --cov-report=html
 ```
 
 **Integration Tests**
@@ -546,7 +552,7 @@ python -m pytest tests/ -m integration -v
 tests/
 ├── __init__.py              # Test package initialization
 ├── conftest.py              # Pytest configuration and fixtures
-├── test_drainage.py         # Main test suite for drainage module
+├── test_delta_skelter.py         # Main test suite for delta_skelter module
 └── README.md               # Detailed testing documentation
 ```
 
@@ -625,7 +631,7 @@ make remove-hooks
 
 #### Continuous Integration
 
-Drainage uses GitHub Actions for automated testing on:
+Delta-Skelter uses GitHub Actions for automated testing on:
 
 - **Operating Systems**: Ubuntu, Windows, macOS
 - **Python Versions**: 3.8, 3.9, 3.10, 3.11, 3.12
@@ -661,11 +667,11 @@ The test suite provides comprehensive coverage:
 ```python
 def test_analyze_delta_lake_parameters():
     """Test analyze_delta_lake function parameters."""
-    with patch('drainage.analyze_delta_lake') as mock_analyze:
+    with patch('delta_skelter.analyze_delta_lake') as mock_analyze:
         mock_report = MagicMock()
         mock_analyze.return_value = mock_report
         
-        result = drainage.analyze_delta_lake(
+        result = delta_skelter.analyze_delta_lake(
           "abfss://testfs@account.dfs.core.windows.net/test-table/",
         )
 
@@ -687,10 +693,10 @@ def test_with_mock_report(mock_health_report):
 
 ```bash
 # Run specific test file
-python -m pytest tests/test_drainage.py -v
+python -m pytest tests/test_delta_skelter.py -v
 
 # Run specific test function
-python -m pytest tests/test_drainage.py::TestDrainageModule::test_analyze_delta_lake_parameters -v
+python -m pytest tests/test_delta_skelter.py::TestDelta-SkelterModule::test_analyze_delta_lake_parameters -v
 
 # Run tests matching pattern
 python -m pytest tests/ -k "delta_lake" -v
@@ -730,7 +736,7 @@ make info                   # Show project info
 #### Troubleshooting
 
 **Common Issues**
-1. **Import Errors**: Ensure drainage module is built (`make build`)
+1. **Import Errors**: Ensure delta_skelter module is built (`make build`)
 2. **Missing Dependencies**: Install all requirements (`make install`)
 3. **Permission Errors**: Check file permissions
 4. **Timeout Errors**: Increase timeout for slow tests
@@ -744,7 +750,7 @@ make info                   # Show project info
 
 ## Performance
 
-Drainage is designed for speed:
+Delta-Skelter is designed for speed:
 
 - ⚡ Async I/O for concurrent ADLS operations
 - 🐍 Python-first implementation optimized for clarity and portability

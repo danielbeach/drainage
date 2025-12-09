@@ -1,20 +1,20 @@
 <!--
-Guidance for AI coding agents working on the `drainage` repository.
+Guidance for AI coding agents working on the `delta-skelter` repository.
 Keep this short, actionable, and codebase-specific. Update when project layout
 or important workflows change.
 -->
 
-# Copilot / AI Agent Instructions — drainage
+# Copilot / AI Agent Instructions — delta-skelter
 
 Short goal: maintenance and feature work should keep the project Python-first
 and Delta-on-ADLS focused (no S3/AWS or Iceberg reintroduction; Rust removed).
 
 - Big picture
-  - `drainage/` is the Python package. Primary modules to read first:
-    - `drainage/__init__.py` — public API (analyze_table, analyze_delta_lake, print_health_report).
-    - `drainage/adls_client.py` — ADLS access and authentication (uses `DefaultAzureCredential`, supports UAMI `client_id`).
-    - `drainage/delta_lake.py` — Delta analyzer implementation (core analysis logic lives here).
-    - `drainage/types.py` — dataclasses describing HealthReport and metrics.
+  - `delta_skelter/` is the Python package. Primary modules to read first:
+    - `delta_skelter/__init__.py` — public API (analyze_table, analyze_delta_lake, print_health_report).
+    - `delta_skelter/adls_client.py` — ADLS access and authentication (uses `DefaultAzureCredential`, supports UAMI `client_id`).
+    - `delta_skelter/delta_lake.py` — Delta analyzer implementation (core analysis logic lives here).
+    - `delta_skelter/types.py` — dataclasses describing HealthReport and metrics.
   - Examples in `examples/` show intended usage patterns and UAMI examples.
 
 - Important architectural constraints
@@ -30,15 +30,15 @@ and Delta-on-ADLS focused (no S3/AWS or Iceberg reintroduction; Rust removed).
 - Conventions and patterns observed
   - Authentication: prefer `DefaultAzureCredential`; if a UAMI must be used, callers pass `client_id` into `ADLSClient`/analyze functions.
   - Public API stability: `analyze_table(path, table_type=None, client_id=None)` and `analyze_delta_lake(path, client_id=None)` are the primary entrypoints; keep their signatures stable.
-  - Tests mock top-level functions (see `tests/test_drainage.py`); keep names and call signatures consistent to avoid breaking mocks.
+  - Tests mock top-level functions (see `tests/test_delta_skelter.py`); keep names and call signatures consistent to avoid breaking mocks.
 
 - Integration points & cross-component communication
   - ADLS access: `adls_client.py` is the single place to interact with Azure storage. New features that need storage access should use or extend this client.
   - Examples under `examples/` demonstrate how the public API is used; mirror those patterns in new code.
 
 - Files to read when assessing changes
-  - `drainage/__init__.py`, `drainage/adls_client.py`, `drainage/delta_lake.py`, `drainage/types.py`
-  - `tests/test_drainage.py` and `tests/conftest.py` for test expectations and fixtures
+  - `delta_skelter/__init__.py`, `delta_skelter/adls_client.py`, `delta_skelter/delta_lake.py`, `delta_skelter/types.py`
+  - `tests/test_delta_skelter.py` and `tests/conftest.py` for test expectations and fixtures
   - `pyproject.toml` and `.github/workflows/ci.yml` for packaging and CI requirements
 
 - Safety checks for AI edits (must-pass checklist for patches)
@@ -50,8 +50,8 @@ and Delta-on-ADLS focused (no S3/AWS or Iceberg reintroduction; Rust removed).
 - Quick code snippets (copyable)
   - Analyze with UAMI:
     ```py
-    import drainage
-    report = drainage.analyze_delta_lake("abfss://fs@account.dfs.core.windows.net/table/", client_id="<uami-client-id>")
+    import delta_skelter
+    report = delta_skelter.analyze_delta_lake("abfss://fs@account.dfs.core.windows.net/table/", client_id="<uami-client-id>")
     ```
 
 If anything in these instructions is unclear or you need more examples of existing patterns, ask for the specific area to expand (tests, auth flows, analyzer internals).

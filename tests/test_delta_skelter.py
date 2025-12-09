@@ -1,7 +1,7 @@
 """
-Test suite for the drainage Python module.
+Test suite for the delta_skelter Python module.
 
-This module contains comprehensive tests for the drainage library's Python bindings,
+This module contains comprehensive tests for the delta_skelter library's Python bindings,
 including unit tests for all public functions and integration tests for the
 complete analysis workflow.
 """
@@ -11,52 +11,52 @@ import sys
 import os
 from unittest.mock import patch, MagicMock
 
-# Add the parent directory to the path so we can import drainage
+# Add the parent directory to the path so we can import delta_skelter
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    import drainage
+    import delta_skelter
 except ImportError:
-    # If drainage is not installed, we'll skip the tests
-    drainage = None
+    # If delta_skelter is not installed, we'll skip the tests
+    delta_skelter = None
 
 
-class TestDrainageModule(unittest.TestCase):
-    """Test cases for the drainage module."""
+class TestDeltaSkelterModule(unittest.TestCase):
+    """Test cases for the delta_skelter module."""
 
     @classmethod
     def setUpClass(cls):
         """Set up test class."""
-        if drainage is None:
-            raise unittest.SkipTest("drainage module not available")
+        if delta_skelter is None:
+            raise unittest.SkipTest("delta_skelter module not available")
 
     def test_module_import(self):
-        """Test that the drainage module can be imported."""
-        self.assertIsNotNone(drainage)
-        self.assertTrue(hasattr(drainage, "analyze_delta_lake"))
-        self.assertTrue(hasattr(drainage, "analyze_table"))
-        self.assertTrue(hasattr(drainage, "print_health_report"))
+        """Test that the delta_skelter module can be imported."""
+        self.assertIsNotNone(delta_skelter)
+        self.assertTrue(hasattr(delta_skelter, "analyze_delta_lake"))
+        self.assertTrue(hasattr(delta_skelter, "analyze_table"))
+        self.assertTrue(hasattr(delta_skelter, "print_health_report"))
 
     def test_analyze_delta_lake_function_exists(self):
         """Test that analyze_delta_lake function exists and is callable."""
-        self.assertTrue(callable(drainage.analyze_delta_lake))
+        self.assertTrue(callable(delta_skelter.analyze_delta_lake))
 
     def test_analyze_table_function_exists(self):
         """Test that analyze_table function exists and is callable."""
-        self.assertTrue(callable(drainage.analyze_table))
+        self.assertTrue(callable(delta_skelter.analyze_table))
 
     def test_print_health_report_function_exists(self):
         """Test that print_health_report function exists and is callable."""
-        self.assertTrue(callable(drainage.print_health_report))
+        self.assertTrue(callable(delta_skelter.print_health_report))
 
-    @patch("drainage.analyze_delta_lake")
+    @patch("delta_skelter.analyze_delta_lake")
     def test_analyze_delta_lake_parameters(self, mock_analyze):
         """Test analyze_delta_lake function parameters."""
         # Mock the return value
         mock_report = MagicMock()
         mock_analyze.return_value = mock_report
         # Test with path and client_id parameters
-        result = drainage.analyze_delta_lake(
+        result = delta_skelter.analyze_delta_lake(
             "abfss://fs@account.dfs.core.windows.net/test-table/",
             "test-uami-client-id",
         )
@@ -68,7 +68,7 @@ class TestDrainageModule(unittest.TestCase):
         )
         self.assertEqual(result, mock_report)
 
-    @patch("drainage.analyze_delta_lake")
+    @patch("delta_skelter.analyze_delta_lake")
     def test_analyze_delta_lake_optional_parameters(self, mock_analyze):
         """Test analyze_delta_lake function with optional parameters."""
         # Mock the return value
@@ -76,7 +76,7 @@ class TestDrainageModule(unittest.TestCase):
         mock_analyze.return_value = mock_report
 
         # Test with only required parameters
-        result = drainage.analyze_delta_lake(
+        result = delta_skelter.analyze_delta_lake(
             "abfss://fs@account.dfs.core.windows.net/test-table/"
         )
 
@@ -86,7 +86,7 @@ class TestDrainageModule(unittest.TestCase):
         )
         self.assertEqual(result, mock_report)
 
-    @patch("drainage.analyze_table")
+    @patch("delta_skelter.analyze_table")
     def test_analyze_table_parameters(self, mock_analyze):
         """Test analyze_table function parameters."""
         # Mock the return value
@@ -94,7 +94,7 @@ class TestDrainageModule(unittest.TestCase):
         mock_analyze.return_value = mock_report
 
         # Test with all parameters (path, table_type, client_id)
-        result = drainage.analyze_table(
+        result = delta_skelter.analyze_table(
             "abfss://fs@account.dfs.core.windows.net/test-table/",
             table_type="delta",
             client_id="test-uami-client-id",
@@ -108,7 +108,7 @@ class TestDrainageModule(unittest.TestCase):
         )
         self.assertEqual(result, mock_report)
 
-    @patch("drainage.analyze_table")
+    @patch("delta_skelter.analyze_table")
     def test_analyze_table_auto_detection(self, mock_analyze):
         """Test analyze_table function with auto-detection."""
         # Mock the return value
@@ -116,7 +116,7 @@ class TestDrainageModule(unittest.TestCase):
         mock_analyze.return_value = mock_report
 
         # Test with auto-detection (no table_type specified)
-        result = drainage.analyze_table(
+        result = delta_skelter.analyze_table(
             "abfss://fs@account.dfs.core.windows.net/test-table/"
         )
 
@@ -174,8 +174,8 @@ class TestDrainageModule(unittest.TestCase):
         # Test that the function exists and can be called
         # Note: We can't easily test this without a real HealthReport object
         # since the HealthReport class is not exposed in the Python API
-        self.assertTrue(hasattr(drainage, "print_health_report"))
-        self.assertTrue(callable(drainage.print_health_report))
+        self.assertTrue(hasattr(delta_skelter, "print_health_report"))
+        self.assertTrue(callable(delta_skelter.print_health_report))
 
     def test_adls_path_validation(self):
         """Test ADLS path validation."""
@@ -357,16 +357,16 @@ class TestDrainageModule(unittest.TestCase):
             )
 
 
-class TestDrainageIntegration(unittest.TestCase):
-    """Integration tests for the drainage module."""
+class Testdelta_skelterIntegration(unittest.TestCase):
+    """Integration tests for the delta_skelter module."""
 
     @classmethod
     def setUpClass(cls):
         """Set up test class."""
-        if drainage is None:
-            raise unittest.SkipTest("drainage module not available")
+        if delta_skelter is None:
+            raise unittest.SkipTest("delta_skelter module not available")
 
-    @patch("drainage.analyze_table")
+    @patch("delta_skelter.analyze_table")
     def test_complete_analysis_workflow(self, mock_analyze):
         """Test complete analysis workflow."""
         # Mock the return value
@@ -381,7 +381,7 @@ class TestDrainageIntegration(unittest.TestCase):
         path = "abfss://fs@account.dfs.core.windows.net/test-table/"
 
         # Analyze the table
-        report = drainage.analyze_table(path)
+        report = delta_skelter.analyze_table(path)
 
         # Verify the analysis was performed
         mock_analyze.assert_called_once_with(path)
@@ -391,7 +391,7 @@ class TestDrainageIntegration(unittest.TestCase):
         self.assertEqual(report.table_type, "delta")
         self.assertEqual(report.health_score, 0.85)
 
-    @patch("drainage.analyze_delta_lake")
+    @patch("delta_skelter.analyze_delta_lake")
     def test_delta_lake_analysis_workflow(self, mock_analyze):
         """Test Delta Lake analysis workflow."""
         # Mock the return value
@@ -406,7 +406,7 @@ class TestDrainageIntegration(unittest.TestCase):
         path = "abfss://fs@account.dfs.core.windows.net/delta-table/"
 
         # Analyze the Delta Lake table
-        report = drainage.analyze_delta_lake(path)
+        report = delta_skelter.analyze_delta_lake(path)
 
         # Verify the analysis was performed
         mock_analyze.assert_called_once_with(path)

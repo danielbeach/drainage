@@ -1,7 +1,7 @@
 """
-Pytest configuration and fixtures for drainage tests.
+Pytest configuration and fixtures for delta_skelter tests.
 
-This module provides common fixtures and configuration for testing the drainage library.
+This module provides common fixtures and configuration for testing the delta_skelter library.
 """
 
 import pytest
@@ -9,21 +9,21 @@ import sys
 import os
 from unittest.mock import MagicMock, patch
 
-# Add the parent directory to the path so we can import drainage
+# Add the parent directory to the path so we can import delta_skelter
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    import drainage
+    import delta_skelter
 except ImportError:
-    drainage = None
+    delta_skelter = None
 
 
 @pytest.fixture(scope="session")
-def drainage_module():
-    """Provide the drainage module for testing."""
-    if drainage is None:
-        pytest.skip("drainage module not available")
-    return drainage
+def delta_skelter_module():
+    """Provide the delta_skelter module for testing."""
+    if delta_skelter is None:
+        pytest.skip("delta_skelter module not available")
+    return delta_skelter
 
 
 @pytest.fixture

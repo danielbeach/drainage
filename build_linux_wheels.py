@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build Linux wheels for drainage package using cibuildwheel
+Build Linux wheels for delta_skelter package using cibuildwheel
 """
 
 import subprocess
@@ -19,7 +19,7 @@ def run_command(cmd, description):
 
 
 def main():
-    print("🚀 Building Linux wheels for drainage...")
+    print("🚀 Building Linux wheels for delta_skelter...")
 
     # Install cibuildwheel
     if not run_command("pip install cibuildwheel", "Installing cibuildwheel"):

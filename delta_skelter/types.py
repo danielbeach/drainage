@@ -1,4 +1,4 @@
-"""Data types for drainage analysis (pure Python dataclasses).
+"""Data types for Delta-Skelter analysis (pure Python dataclasses).
 
 These dataclasses are intentionally lightweight and cover the fields
 required by the Delta Lake analyzer implementation. Additional fields
@@ -85,6 +85,7 @@ class HealthMetrics:
     time_travel_metrics: Optional[Dict] = None
     table_constraints: Optional[Dict] = None
     file_compaction: Optional[Dict] = None
+    table_properties: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

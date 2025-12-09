@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
-from drainage.delta_lake import DeltaLakeAnalyzer
+from delta_skelter.delta_lake import DeltaLakeAnalyzer
 
 
 class FakeADLSClient:

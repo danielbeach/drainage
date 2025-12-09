@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "drainage"
-version = "0.1.7"
+name = "delta-skelter"
+version = "0.0.1"
 description = "Data lake health analyzer for Delta Lake on ADLS (Python-only)"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -32,8 +32,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/danielbeach/drainage"
-Repository = "https://github.com/danielbeach/drainage"
-Documentation = "https://github.com/danielbeach/drainage#readme"
-Issues = "https://github.com/danielbeach/drainage/issues"
+Homepage = "https://github.com/moolahlah/delta-skelter"
+Repository = "https://github.com/moolahlah/delta-skelter"
+Documentation = "https://github.com/moolahlah/delta-skelter#readme"
+Issues = "https://github.com/moolahlah/delta-skelter/issues"
 

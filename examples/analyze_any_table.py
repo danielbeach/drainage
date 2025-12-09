@@ -8,7 +8,7 @@ NotImplementedError).
 """
 
 import sys
-import drainage
+import delta_skelter
 
 
 def analyze_any_table(path: str, table_type: str = None, client_id: str = None):
@@ -35,7 +35,7 @@ def analyze_any_table(path: str, table_type: str = None, client_id: str = None):
 
     try:
         # Run the analysis (Delta Lake only)
-        report = drainage.analyze_table(path, table_type or "delta", client_id)
+        report = delta_skelter.analyze_table(path, table_type or "delta", client_id)
 
         # Print header
         print(f"{'='*70}")

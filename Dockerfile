@@ -1,4 +1,3 @@
-# Simple container for the Drainage REST API
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

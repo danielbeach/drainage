@@ -2,12 +2,12 @@
 """
 Simple example showing the easiest way to analyze a data lake table.
 
-This script demonstrates the most straightforward usage of the drainage library
+This script demonstrates the most straightforward usage of the delta_skelter library
 with the built-in print_health_report function.
 """
 
 import sys
-import drainage
+import delta_skelter
 
 
 def main():
@@ -31,10 +31,10 @@ def main():
 
     try:
         # Analyze the table (auto-detects type)
-        report = drainage.analyze_table(path, None, client_id)
+        report = delta_skelter.analyze_table(path, None, client_id)
 
         # Print the comprehensive health report
-        drainage.print_health_report(report)
+        delta_skelter.print_health_report(report)
 
         # You can also access individual metrics if needed
         print("\nQuick Summary:")

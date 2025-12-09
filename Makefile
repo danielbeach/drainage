@@ -1,4 +1,4 @@
-# Makefile for drainage project
+# Makefile for delta-skelter project
 
 .PHONY: help install build test test-python test-integration lint format clean release
 
@@ -24,7 +24,7 @@ install:
 
 # Build the project
 build:
-	@echo "Building drainage..."
+	@echo "Building delta-skelter..."
 	python -m pip install --upgrade pip
 	pip install -e .
 
@@ -34,7 +34,7 @@ test: test-python test-integration
 # Run Python tests
 test-python:
 	@echo "Running Python tests..."
-	python -m pytest tests/ -v --cov=drainage --cov-report=xml
+	python -m pytest tests/ -v --cov=delta_skelter --cov-report=xml
 
 # Run integration tests
 test-integration:
@@ -75,8 +75,8 @@ release:
 # Generate documentation
 docs:
 	@echo "Generating documentation..."
-	python -c "import drainage; help(drainage)" > drainage_help.txt
-	@echo "Documentation generated in drainage_help.txt"
+	python -c "import delta_skelter; help(delta_skelter)" > delta-skelter_help.txt
+	@echo "Documentation generated in delta-skelter_help.txt"
 
 # Security checks
 security:
@@ -160,7 +160,7 @@ remove-hooks:
 
 # Show project info
 info:
-	@echo "Project: drainage"
+	@echo "Project: delta-skelter"
 	@echo "Language: Python"
 	@echo "Build tool: maturin"
 	@echo "Test framework: pytest"

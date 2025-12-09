@@ -6,8 +6,8 @@ This implementation mirrors the core logic needed to:
 - parse add actions from transaction JSON to find referenced files
 - compute basic metrics and unreferenced files
 
-It uses `drainage.ADLSClient` for storage access and the dataclasses
-in `drainage.types`.
+It uses `delta_skelter.ADLSClient` for storage access and the dataclasses
+in `delta_skelter.types`.
 """
 
 from typing import List
@@ -38,7 +38,9 @@ class DeltaLakeAnalyzer:
 
     async def analyze(self) -> HealthReport:
         account = getattr(self.client, "get_account", None)
-        account_name = account() if callable(account) else getattr(self.client, "_account", "")
+        account_name = (
+            account() if callable(account) else getattr(self.client, "_account", "")
+        )
         table_path = f"abfss://{self.client.get_bucket()}@{account_name}.dfs.core.windows.net/{self.client.get_prefix()}"
         report = HealthReport.new(table_path, "delta")
 
@@ -54,8 +56,9 @@ class DeltaLakeAnalyzer:
         # metadata files are any files under the _delta_log directory (JSON transactions and checkpoint parquet)
         metadata_files = [o for o in all_objects if "_delta_log/" in o.key]
 
-        # parse metadata files (transaction log) to find referenced files
+        # parse metadata files (transaction log) to find referenced files and table properties
         referenced = set()
+        table_properties: dict[str, str] = {}
         # parse only JSON transaction files to discover referenced data files
         parse_errors = 0
         for m in [mf for mf in metadata_files if mf.key.endswith(".json")]:
@@ -71,12 +74,14 @@ class DeltaLakeAnalyzer:
                 line = line.strip()
                 if not line:
                     continue
+                parsed_full_content = False
                 try:
                     j = json.loads(line)
                 except Exception:
                     # try full content as JSON fallback
                     try:
                         j = json.loads(text)
+                        parsed_full_content = True
                         # if successful, process and break
                     except Exception:
                         parse_errors += 1
@@ -93,8 +98,14 @@ class DeltaLakeAnalyzer:
                         for item in j["add"]:
                             if isinstance(item, dict) and "path" in item:
                                 referenced.add(item["path"])
+                    if "metaData" in j and isinstance(j["metaData"], dict):
+                        cfg = j["metaData"].get("configuration")
+                        if isinstance(cfg, dict):
+                            table_properties.update(
+                                {str(k): str(v) for k, v in cfg.items()}
+                            )
                 # once full-content parse succeeds, stop iterating lines to avoid duplicate work
-                if "j" in locals():
+                if parsed_full_content:
                     break
 
         # --- Metadata health: count and sizes of _delta_log files ---
@@ -157,6 +168,8 @@ class DeltaLakeAnalyzer:
         metrics.unreferenced_size_bytes = sum(
             fi.size_bytes for fi in metrics.unreferenced_files
         )
+
+        metrics.table_properties.update(table_properties)
 
         # average file size
         if metrics.total_files > 0:

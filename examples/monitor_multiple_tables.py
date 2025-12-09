@@ -6,7 +6,7 @@ This script demonstrates how to analyze multiple tables and generate
 a summary report, useful for regular health checks and monitoring.
 """
 
-import drainage
+import delta_skelter
 from datetime import datetime
 from typing import List, Tuple
 
@@ -34,7 +34,7 @@ def monitor_tables(tables: List[Tuple[str, str]], client_id: str = None):
         print(f"[{i}/{len(tables)}] Analyzing {path} ({table_type})...")
 
         try:
-            report = drainage.analyze_delta_lake(path, client_id)
+            report = delta_skelter.analyze_delta_lake(path, client_id)
 
             results.append(
                 {

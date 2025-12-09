@@ -1,15 +1,16 @@
-# Drainage Tests
+# Delta-Skelter Tests
 
-This directory contains comprehensive tests for the drainage library, including unit tests, integration tests, and example tests.
+This directory contains comprehensive tests for the delta-skelter library, including unit tests, integration tests, and example tests.
 
 ## Test Structure
 
 ```
 tests/
-├── __init__.py              # Test package initialization
-├── conftest.py              # Pytest configuration and fixtures
-├── test_drainage.py         # Main test suite for drainage module
-└── README.md               # This file
+├── __init__.py               # Test package initialization
+├── conftest.py               # Pytest configuration and fixtures
+├── test_delta_skelter.py     # Core API/unit coverage
+├── test_extended_delta.py    # ADLS/Delta behavior, metadata edge cases, integration
+└── README.md                # This file
 ```
 
 ## Running Tests
@@ -99,7 +100,7 @@ addopts =
 
 The `conftest.py` file provides common fixtures for testing:
 
-- `drainage_module`: The drainage module
+- `delta_skelter_module`: The delta-skelter module
 - `mock_health_report`: Mock health report for testing
 - `mock_delta_lake_objects`: Mock Delta Lake objects
 - `valid_adls_paths`: Valid ADLS paths for testing
@@ -114,7 +115,7 @@ To run tests with coverage:
 # Run with coverage
 make coverage
 # or
-python -m pytest tests/ --cov=drainage --cov-report=html
+python -m pytest tests/ --cov=delta_skelter --cov-report=html
 
 # View coverage report
 open htmlcov/index.html
@@ -133,11 +134,11 @@ open htmlcov/index.html
 ```python
 def test_analyze_delta_lake_parameters():
     """Test analyze_delta_lake function parameters."""
-    with patch('drainage.analyze_delta_lake') as mock_analyze:
+    with patch('delta_skelter.analyze_delta_lake') as mock_analyze:
         mock_report = MagicMock()
         mock_analyze.return_value = mock_report
 
-        result = drainage.analyze_delta_lake(
+        result = delta_skelter.analyze_delta_lake(
             "abfss://testfs@account.dfs.core.windows.net/test-table/",
         )
 
@@ -191,10 +192,10 @@ The CI pipeline includes:
 
 ```bash
 # Run specific test file
-python -m pytest tests/test_drainage.py -v
+python -m pytest tests/test_extended_delta.py -v
 
 # Run specific test function
-python -m pytest tests/test_drainage.py::TestDrainageModule::test_analyze_delta_lake_parameters -v
+python -m pytest tests/test_delta_skelter.py::TestDelta_skelterModule::test_analyze_delta_lake_parameters -v
 
 # Run tests matching pattern
 python -m pytest tests/ -k "delta_lake" -v
@@ -245,7 +246,7 @@ Test data is provided through fixtures in `conftest.py`. For custom test data:
 
 ### Common Issues
 
-1. **Import Errors**: Make sure the drainage module is built
+1. **Import Errors**: Make sure the delta-skelter module is built
 2. **Missing Dependencies**: Install all requirements
 3. **Permission Errors**: Check file permissions
 4. **Timeout Errors**: Increase timeout for slow tests

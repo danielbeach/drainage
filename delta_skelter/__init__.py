@@ -1,4 +1,4 @@
-"""Drainage Python package.
+"""Delta-Skelter Python package.
 
 Provides a concise, Python-first API for analyzing Delta Lake tables
 stored on Azure Data Lake Storage (ADLS). Exposes the ADLS client

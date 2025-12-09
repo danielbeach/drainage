@@ -1,13 +1,14 @@
-import drainage
+import delta_skelter
+from delta_skelter.delta_lake import DeltaLakeAnalyzer
 from types import SimpleNamespace
 
 
 def patch_clients(monkeypatch, client_cls):
     """Ensure both public and internal analyzer use the patched ADLS client."""
-    import drainage.delta_lake as dl
-    import drainage.adls_client as adls
+    import delta_skelter.delta_lake as dl
+    import delta_skelter.adls_client as adls
 
-    monkeypatch.setattr(drainage, "ADLSClient", client_cls)
+    monkeypatch.setattr(delta_skelter, "ADLSClient", client_cls)
     monkeypatch.setattr(dl, "ADLSClient", client_cls)
     monkeypatch.setattr(adls, "ADLSClient", client_cls)
 
@@ -21,7 +22,7 @@ class FakeADLSClientSimple:
         self._objects = (
             objects
             if objects is not None
-            else getattr(FakeADLSClientSimple, "_global_objects", [])
+            else getattr(self.__class__, "_global_objects", [])
         )
 
     def get_bucket(self):
@@ -51,13 +52,13 @@ def test_analyze_table_forwards_thresholds(monkeypatch):
     # sanity: patched client returns our objects
     import asyncio
 
-    assert drainage.ADLSClient is FakeADLSClientSimple
+    assert delta_skelter.ADLSClient is FakeADLSClientSimple
 
-    objs = asyncio.run(drainage.ADLSClient("unused").list_objects(None))
+    objs = asyncio.run(delta_skelter.ADLSClient("unused").list_objects(None))
     assert len(objs) == len(data_files) + len(metadata)
 
     # analyze_table should forward threshold kwargs to analyze_delta_lake
-    report = drainage.analyze_table(
+    report = delta_skelter.analyze_table(
         "abfss://fs@account.dfs.core.windows.net/test/",
         table_type="delta",
         metadata_file_count_threshold=5,
@@ -80,10 +81,10 @@ def test_unreferenced_files_detection(monkeypatch):
     patch_clients(monkeypatch, FakeADLSClientSimple)
     import asyncio
 
-    objs = asyncio.run(drainage.ADLSClient("unused").list_objects(None))
+    objs = asyncio.run(delta_skelter.ADLSClient("unused").list_objects(None))
     assert len(objs) == len(data_files) + len(metadata_json)
 
-    report = drainage.analyze_delta_lake(
+    report = delta_skelter.analyze_delta_lake(
         "abfss://fs@account.dfs.core.windows.net/test/"
     )
 
@@ -103,10 +104,10 @@ def test_manifest_file_count_counts_parquet_checkpoint(monkeypatch):
     patch_clients(monkeypatch, FakeADLSClientSimple)
     import asyncio
 
-    objs = asyncio.run(drainage.ADLSClient("unused").list_objects(None))
+    objs = asyncio.run(delta_skelter.ADLSClient("unused").list_objects(None))
     assert len(objs) == len(data_files) + len(metadata_files)
 
-    report = drainage.analyze_delta_lake(
+    report = delta_skelter.analyze_delta_lake(
         "abfss://fs@account.dfs.core.windows.net/test/"
     )
 
@@ -114,6 +115,87 @@ def test_manifest_file_count_counts_parquet_checkpoint(monkeypatch):
     assert mh is not None
     # manifest_file_count should count parquet/checkpoint files under _delta_log
     assert mh.manifest_file_count >= 2
+
+
+def test_bloated_delta_log_detection(monkeypatch):
+    # many metadata files plus checkpoint parquet files should trigger recommendations
+    metadata_files = [
+        make_obj(f"_delta_log/{i:05d}.json", size=1024) for i in range(150)
+    ]
+    metadata_files += [
+        make_obj(f"_delta_log/{i:05d}.checkpoint.parquet", size=2048) for i in range(5)
+    ]
+    data_files = [
+        make_obj(f"data/part-{i:05d}.parquet", size=10 * 1024 * 1024) for i in range(10)
+    ]
+    FakeADLSClientSimple._global_objects = data_files + metadata_files
+    patch_clients(monkeypatch, FakeADLSClientSimple)
+    import asyncio
+
+    analyzer = DeltaLakeAnalyzer(FakeADLSClientSimple("unused"))
+    report = asyncio.run(analyzer.analyze())
+
+    mh = report.metrics.metadata_health
+    assert mh is not None
+    assert mh.metadata_file_count == len(metadata_files)
+    assert mh.metadata_total_size_bytes == sum(m.size for m in metadata_files)
+    assert mh.manifest_file_count >= 5
+    assert any(
+        "large" in r.lower() or "metadata" in r.lower()
+        for r in report.metrics.recommendations
+    )
+
+
+def test_integration_large_metadata_triggers_recommendation(monkeypatch):
+    data_files = [
+        make_obj(f"data/part-{i:05d}.parquet", size=5 * 1024 * 1024) for i in range(5)
+    ]
+    metadata_json = [
+        make_obj(f"_delta_log/{i:05d}.json", size=1024) for i in range(120)
+    ]
+    checkpoints = [
+        make_obj(f"_delta_log/{i:05d}.checkpoint.parquet", size=2048) for i in range(3)
+    ]
+    FakeADLSClientSimple._global_objects = data_files + metadata_json + checkpoints
+    patch_clients(monkeypatch, FakeADLSClientSimple)
+
+    report = delta_skelter.analyze_delta_lake(
+        "abfss://fs@account.dfs.core.windows.net/test-table/"
+    )
+
+    assert report.metrics.metadata_health is not None
+    assert report.metrics.metadata_health.metadata_file_count == len(
+        metadata_json
+    ) + len(checkpoints)
+    assert any(
+        "metadata" in r.lower() or "large" in r for r in report.metrics.recommendations
+    )
+
+
+def test_integration_threshold_override_suppresses_recommendation(monkeypatch):
+    data_files = [
+        make_obj(f"data/part-{i:05d}.parquet", size=5 * 1024 * 1024) for i in range(5)
+    ]
+    metadata_json = [make_obj(f"_delta_log/{i:05d}.json", size=1024) for i in range(60)]
+    checkpoints = [
+        make_obj(f"_delta_log/{i:05d}.checkpoint.parquet", size=2048) for i in range(2)
+    ]
+    FakeADLSClientSimple._global_objects = data_files + metadata_json + checkpoints
+    patch_clients(monkeypatch, FakeADLSClientSimple)
+
+    report = delta_skelter.analyze_delta_lake(
+        "abfss://fs@account.dfs.core.windows.net/test-table/",
+        metadata_file_count_threshold=200,
+        metadata_total_size_threshold=100 * 1024 * 1024,
+    )
+
+    assert report.metrics.metadata_health is not None
+    assert report.metrics.metadata_health.metadata_file_count == len(
+        metadata_json
+    ) + len(checkpoints)
+    assert not any(
+        "metadata" in r.lower() or "large" in r for r in report.metrics.recommendations
+    )
 
 
 class FakeADLSClientCorrupt:
@@ -154,10 +236,17 @@ def test_corrupted_metadata_json_does_not_crash(monkeypatch):
     metadata = [make_obj("_delta_log/00000.json", size=10)]
     FakeADLSClientCorrupt._global_objects = data_files + metadata
     # truncated content (missing closing braces)
-    content_map = {"_delta_log/00000.json": b'{"add": {"path": "data/part-00000-0.parquet"'}
-    patch_clients(monkeypatch, lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map))
+    content_map = {
+        "_delta_log/00000.json": b'{"add": {"path": "data/part-00000-0.parquet"'
+    }
+    patch_clients(
+        monkeypatch,
+        lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map),
+    )
 
-    report = drainage.analyze_delta_lake("abfss://fs@account.dfs.core.windows.net/test/")
+    report = delta_skelter.analyze_delta_lake(
+        "abfss://fs@account.dfs.core.windows.net/test/"
+    )
     # since parser couldn't successfully extract references, file should be considered unreferenced
     assert len(report.metrics.unreferenced_files) >= 1
 
@@ -167,10 +256,18 @@ def test_non_utf8_bytes_in_metadata_are_handled(monkeypatch):
     metadata = [make_obj("_delta_log/00000.json", size=10)]
     FakeADLSClientCorrupt._global_objects = data_files + metadata
     # prepend an invalid byte; decoder uses errors='replace' so this simulates malformed bytes
-    content_map = {"_delta_log/00000.json": b"\xff{" + b'"add": {"path": "data/part-00000-0.parquet"}}'}
-    patch_clients(monkeypatch, lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map))
+    content_map = {
+        "_delta_log/00000.json": b"\xff{"
+        + b'"add": {"path": "data/part-00000-0.parquet"}}'
+    }
+    patch_clients(
+        monkeypatch,
+        lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map),
+    )
 
-    report = drainage.analyze_delta_lake("abfss://fs@account.dfs.core.windows.net/test/")
+    report = delta_skelter.analyze_delta_lake(
+        "abfss://fs@account.dfs.core.windows.net/test/"
+    )
     assert len(report.metrics.unreferenced_files) >= 1
 
 
@@ -180,9 +277,14 @@ def test_get_object_exception_skips_metadata(monkeypatch):
     FakeADLSClientCorrupt._global_objects = data_files + metadata
     # simulate storage error while fetching metadata
     content_map = {"_delta_log/00000.json": RuntimeError("storage read error")}
-    patch_clients(monkeypatch, lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map))
+    patch_clients(
+        monkeypatch,
+        lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map),
+    )
 
-    report = drainage.analyze_delta_lake("abfss://fs@account.dfs.core.windows.net/test/")
+    report = delta_skelter.analyze_delta_lake(
+        "abfss://fs@account.dfs.core.windows.net/test/"
+    )
     # metadata fetch failed, so references are unknown -> file considered unreferenced
     assert len(report.metrics.unreferenced_files) >= 1
 
@@ -194,11 +296,52 @@ def test_ndjson_multiline_parsing(monkeypatch):
         make_obj("data/part-00001-0.parquet", size=1024),
     ]
     metadata = [make_obj("_delta_log/00000.json", size=200)]
-    FakeADLSClientCorrupt._global_objects = data_files + metadata
+    import asyncio
+
     ndjson = b'{"add": {"path": "data/part-00000-0.parquet"}}\n{"add": {"path": "data/part-00001-0.parquet"}}'
     content_map = {"_delta_log/00000.json": ndjson}
-    patch_clients(monkeypatch, lambda *a, **k: FakeADLSClientCorrupt(*a, **k, content_map=content_map))
-
-    report = drainage.analyze_delta_lake("abfss://fs@account.dfs.core.windows.net/test/")
+    client = FakeADLSClientCorrupt(
+        "unused",
+        objects=data_files + metadata,
+        content_map=content_map,
+    )
+    report = asyncio.run(DeltaLakeAnalyzer(client).analyze())
     # both files are referenced, so unreferenced list should be empty
     assert len(report.metrics.unreferenced_files) == 0
+
+
+class FakeADLSClientWithProperties:
+    def __init__(self):
+        self._filesystem = "fs"
+        self._account = "account"
+        self._prefix = "props"
+        self._objects = [
+            make_obj("data/part-00000.parquet", size=1024),
+            make_obj("_delta_log/00000.json", size=200),
+        ]
+
+    def get_bucket(self):
+        return self._filesystem
+
+    def get_prefix(self):
+        return self._prefix
+
+    def get_account(self):
+        return self._account
+
+    async def list_objects(self, prefix=None):
+        return self._objects
+
+    async def get_object(self, key: str):
+        return b'{"metaData": {"configuration": {"delta.appendOnly": "true", "delta.enableChangeDataFeed": "false"}}}'
+
+
+def test_table_properties_are_collected():
+    import asyncio
+
+    client = FakeADLSClientWithProperties()
+    report = asyncio.run(DeltaLakeAnalyzer(client).analyze())
+
+    props = report.metrics.table_properties
+    assert props.get("delta.appendOnly") == "true"
+    assert props.get("delta.enableChangeDataFeed") == "false"

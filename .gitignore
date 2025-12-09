@@ -227,7 +227,7 @@ Temporary Items
 # Test artifacts
 test-results/
 bandit-report.json
-drainage_help.txt
+delta-skelter_help.txt
 .pytest_cache/
 .coverage
 htmlcov/
